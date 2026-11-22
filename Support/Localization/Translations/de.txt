@@ -1,0 +1,669 @@
+0|  · Administrator
+2|%@ ist fehlgeschlagen (%lld).
+3|%@ ist noch nicht installiert.
+4|%@ · %lld Einträge
+5|%lld %@ · %lld aktiviert
+6|%lld verbunden · %lld Operationen/s
+7|%lld aktiviert
+8|%lld von %lld aktiviert
+9|%lld Erweiterungen geladen
+10|%lld von Server verwaltet
+11|%lld gerade im Internet geteilt
+15|Eine neue Version von Server ist verfügbar
+16|Ein Passwort ist erforderlich, bevor sich andere Geräte verbinden können.
+17|Es wird ein zufälliges Passwort erzeugt. Nur Buchstaben, Ziffern und Unterstriche.
+18|KI-Modelle
+19|KI-Modelle-Chat
+20|API-Schlüssel
+21|Verbindungen von anderen Geräten akzeptieren
+22|Anfragen von anderen Geräten im Netzwerk akzeptieren (API und Web-App)
+23|Zugriff
+24|Zugriffsgrenzen
+25|Aktivität
+26|Hinzufügen
+27|Adresse hinzufügen …
+28|Domain hinzufügen …
+29|Einträge hinzufügen
+30|Eintrag hinzufügen
+31|Ordner hinzufügen …
+32|Schlüssel hinzufügen
+33|Schlüssel hinzufügen …
+34|Öffentlichen Schlüssel hinzufügen
+35|Eintrag hinzufügen …
+36|Benutzer hinzufügen
+37|Benutzer hinzufügen …
+38|Website hinzufügen
+39|Website hinzufügen …
+40|Füge eine Website hinzu, um einen Ordner mit Apache oder Nginx zu bereitzustellen, mit PHP oder Node.js.
+41|nvm zu ~/.zshrc hinzufügen
+42|Wird in den http { }-Block von nginx.conf eingefügt. Vor dem Anwenden mit nginx -t geprüft.
+43|Wird vor den virtuellen Hosts in httpd.conf eingefügt. Vor dem Anwenden mit httpd -t geprüft.
+44|Wird in den Abschnitt [mysqld] von my.cnf eingefügt. Wirkt nach einem Neustart.
+45|Zusätzliche Parameter für die Direktive <Directory>
+46|Zusätzliche Parameter für die Direktive <VirtualHost>
+47|Zusätzliche Parameter für location /
+48|Zusätzliche Parameter für die Direktive server
+49|Adresse
+50|Zu teilende Adresse
+51|Administratoren
+52|Erweitert
+53|Aliasse
+54|Alle
+55|Alle Inhalte
+56|Alle Tabellen und Daten dieser Datenbank werden dauerhaft gelöscht.
+57|Alle Benutzer
+58|Erlauben
+59|Zugriff erlauben für
+60|Eingehende Verbindungen erlauben
+61|Ortungszugriff erlauben …
+62|Verschlüsselte Verbindungen erlauben (explizites TLS)
+63|Gastbenutzer erlauben
+64|Gästen erlauben, sich ohne Account zu verbinden
+65|Anderen erlauben, diesen Bildschirm zu sehen und zu steuern
+66|Dauerhafte Verbindungen erlauben
+67|Benutzern erlauben, sich per SSH anzumelden
+68|Erlaubt
+69|Wenn du einen Server erlaubst, können andere Geräte in deinem Netzwerk auf Websites und Datenbanken dieses Mac zugreifen.
+70|Auch mit Einträgen aus /etc/hosts antworten
+71|Geräten im lokalen Netzwerk antworten, nicht nur diesem Mac
+72|Jeden Namen unter einer Domain beantworten
+73|Einen bestimmten Namen beantworten
+74|In %@ s vom Modell auf dem Gerät beantwortet.
+75|Antwort
+76|Antworten
+77|Jeder darf die Erlaubnis zur Steuerung des Bildschirms anfragen
+78|Jeder in deinem Netzwerk kann dies öffnen und sich mit einem Mac-Account anmelden. Die Anmeldung ist nicht verschlüsselt (einfaches HTTP): nur in vertrauenswürdigen Netzwerken verwenden.
+79|Alle, die den Bildschirm dieses Mac ansehen oder steuern, werden getrennt.
+80|Jeder mit der Adresse kann sie öffnen, also teile nur, was du öffentlich machen möchtest. Die Adresse ändert sich jedes Mal, und das Teilen endet, wenn du Server beendest.
+81|Jeder mit dem Link sieht die Anmeldeseite deines Chats und kann versuchen, sich mit einem Mac-Benutzernamen und -Passwort anzumelden. Verwende starke Passwörter, teile nur so lange wie nötig und beende das Teilen, wenn du fertig bist. Die API im OpenAI-Stil ist über den Link nur erreichbar, wenn ein API-Schlüssel gesetzt ist.
+82|Apache-HTTP-Server mit PHP-FPM
+83|Apache ist noch nicht installiert. Starte es einmal, um es zu installieren.
+84|App-Port
+85|Appregeln
+86|Nur anhängen
+87|Apple Remote Desktop kann diesen Mac nicht mehr verwalten, und aktive Sitzungen werden getrennt. Das Wiedereinschalten erfolgt in den Systemeinstellungen.
+88|Auf alle Versionen anwenden
+89|Vorhandene zuweisen
+90|Automatisch
+91|Verfügbar, wenn %@ läuft
+92|Basis-URL
+93|Programmdatei
+94|Blockieren
+95|Blockiert
+96|Integriert
+97|Cache
+98|Cachegröße
+99|Inhalte für Geräte in diesem Netzwerk zwischenspeichern
+100|Die Standardversion kann nicht entfernt werden
+101|Abbrechen
+102|Zertifikat
+103|Passwort ändern
+104|Passwort ändern …
+105|Änderungen werden in der Hosts-Datei gesichert, wenn du auf der Seite „Hosts“ auf „Änderungen sichern“ klickst.
+106|Änderungen erfordern das Passwort eines Administrators.
+107|Änderungen an Benutzern wirken sofort, ohne den Server neu zu starten.
+108|Zeichensatz
+109|Chat-Web-App
+110|Chats
+111|Chats werden gespeichert in
+112|Erneut prüfen
+113|Erneut prüfen
+114|Nach Updates suchen …
+115|Wird geprüft …
+116|Auswählen …
+117|Cache leeren
+118|Cache leeren …
+119|Protokoll leeren
+120|Inhalts-Cache leeren?
+121|Dieses Protokoll leeren?
+122|Leeren …
+123|Clients
+124|Schließen
+125|Sortierung
+126|Befehl
+127|Befehlszeile
+128|Befehle
+129|Kommentar
+130|Einkompilierte Module
+131|Komponenten
+132|Composer
+133|Composer %@
+134|Composer %@ ist verfügbar
+135|Composer benötigt PHP 7.2.5 oder neuer und läuft nicht mehr, wenn diese Version zum Standard wird.
+136|Computername
+137|Konfiguration
+138|Bestätigen
+139|Verbinden
+140|Verbindung zu Cloudflare wird hergestellt …
+141|Verbindung
+142|Verbindungen
+143|Konsole
+144|Inhalts-Caching
+145|Das Inhalts-Caching speichert Software-Updates, Apps und iCloud-Daten, die Geräte in deinem Netzwerk laden, damit sie sie schneller erhalten. Änderungen erfordern das Passwort eines Administrators.
+146|Kopieren
+147|Adresse kopieren
+148|Befehl kopieren
+149|Adresse kopieren
+150|Suche nach Updates nicht möglich
+151|Update konnte nicht installiert werden
+152|Teilen nicht möglich
+153|Installationsprogramm konnte nicht gestartet werden: %@
+154|Umfasst
+155|Erstellen
+156|Datenbank erstellen …
+157|Erstellt eine temporäre öffentliche Adresse (trycloudflare.com), die diese Website über Cloudflare erreicht.
+158|Wird erstellt …
+159|Derzeit %@
+160|Benutzerdefiniert
+161|Benutzerdefinierte Konfiguration
+162|Eigene Zertifikatsdateien
+163|DNS-Eintrag
+164|Daten
+165|Datenverzeichnis
+166|Daten werden in %@ gespeichert.
+167|Datenbank
+168|Datenbankname
+169|Datenbankserver
+170|Datenbanken
+171|Standard %@ · %lld mit nvm installiert
+172|Standard (%@)
+173|Standard (nvm)
+174|Standard-CLI
+175|Standard-CLI: %@ · installiert: %lld
+176|Standardports
+177|Standardversion
+178|Standardwerte
+179|Die Standardwerte stammen aus den %@-Einstellungen in der Seitenleiste.
+180|Datenbank und Benutzer löschen
+181|Datenbank löschen …
+182|Website löschen
+183|Website löschen …
+184|Alle Daten in Redis löschen?
+185|Datenbank %@ löschen?
+186|„%@“ löschen?
+187|Geräte laden Inhalte erneut aus dem Internet, bis sich der Cache wieder füllt.
+188|Verzeichnisindex
+189|Dokumentenstamm
+190|Domain
+191|Fertig
+192|Geladen
+193|Server %@ wird geladen …
+194|Jede MySQL-Version hat ihr eigenes Datenverzeichnis, daher werden deine Daten beim Wechsel der Version nie an Ort und Stelle aktualisiert.
+195|Jede Person sieht in der App nur die eigenen Chats, aber die Dateien sind für den Mac-Account lesbar, der Server ausführt.
+196|Bearbeiten
+197|Adresse bearbeiten
+198|Domain bearbeiten
+199|Eintrag bearbeiten
+200|Hosts-Eintrag bearbeiten
+201|Eintrag bearbeiten
+202|php.ini bearbeiten …
+203|Bearbeiten …
+204|SSL für diese Website aktivieren
+205|Aktiviert
+206|Verschlüsselung
+207|Ende des Supports — keine Sicherheitskorrekturen
+208|Endpunkte
+209|Genau so eingeben, wie es in httpd.conf stehen soll. Änderungen werden vor dem Anwenden mit httpd -t geprüft.
+210|Genau so eingeben, wie es in nginx.conf stehen soll; die Semikolons nicht vergessen. Vor dem Anwenden mit nginx -t geprüft.
+211|Umgebung
+212|Jeder Schlüssel in jeder Datenbank wird entfernt. Das lässt sich nicht widerrufen.
+213|Jeder Name unter einer lokalen Domain antwortet mit seiner Adresse, etwa *.test → dieser Mac. „Auf diesem Mac verwenden“ sendet diese Anfragen an diesen Server (/etc/resolver; erfordert das Passwort eines Administrators).
+214|Alle Server-, PHP- und Website-Protokolle an einem Ort
+215|Beispiel
+216|Erweiterungen
+217|Erweiterungen werden für PHP %@ mit pecl gebaut. Änderungen starten PHP-FPM für Websites neu.
+218|Zusätzliche .ini-Dateien
+219|FTP-Port
+220|FTP-Benutzer sind unabhängig von deinen Mac-Accounts. Jeder ist in seinem eigenen Ordner eingesperrt und liest und schreibt Dateien als du. Das Starten und Stoppen von FTP erfordert das Passwort eines Administrators.
+221|FTPS erlaubt
+222|FTPS erforderlich
+223|Funktionen
+224|Dateifreigabe
+225|Dateiübertragungsserver (Pure-FTPd)
+226|Filtern
+227|Module filtern
+228|Firewall
+229|Alle Daten löschen
+230|Alle Daten löschen …
+231|Ordner
+232|Ordner …
+233|Für andere VNC-Viewer als die Bildschirmfreigabe
+234|Weiterleiten an
+235|Weiterleitung
+236|Leitet weiter an
+237|Frei auf dem Volume
+238|Gibt Speicherplatz frei.
+239|Vollbild
+240|Allgemein
+241|Erzeugen
+242|GitHub hat mit einem Fehler geantwortet (HTTP %lld).
+243|Globale Pakete
+244|Gäste
+245|Verborgenes Netzwerk
+246|Ausblenden
+247|Versionsdetails ausblenden (ServerTokens Prod)
+248|Hochleistungs-Webserver mit PHP-FPM
+249|Homebrew ist aktuell
+250|Das Nginx von Homebrew bringt seine Module fest mit, daher werden sie in der Konfiguration ein- oder ausgeschaltet.
+251|Host
+252|Hostname
+253|Hostnamen
+254|Hostname
+255|Hostnamen mit der Endung .localhost funktionieren in Browsern ohne weitere Einrichtung.
+256|Hosts
+257|Hosts-Datei
+258|So funktioniert es
+259|IP-Adresse
+260|In-Memory-Key-Value-Speicher
+261|InnoDB-Pufferpool
+262|Installieren
+263|%@ installieren?
+264|Installieren und starten
+265|Composer installieren
+266|Jetzt installieren
+267|Update installieren
+268|Version installieren
+269|nvm installieren
+270|Installiert
+271|Installiert (%@)
+272|Installierte Versionen
+273|Mit Homebrew installiert und aktualisiert. Composer läuft mit der Standard-CLI-PHP.
+274|Mit Homebrew installiert. Upgrades der von deinen Websites verwendeten Komponenten laufen automatisch bei jedem Öffnen von Server.
+275|Server %@ wird installiert …
+276|cloudflared wird installiert …
+277|Wird installiert …
+278|Installieren …
+279|Anleitung
+280|Es kann einige Sekunden dauern, bis die Adresse funktioniert.
+281|Der Inhalt wird gelöscht. Der Server schreibt weiter neue Einträge hinein.
+282|Auch die globalen npm-Pakete werden entfernt.
+283|Keep-Alive
+284|Keep-Alive-Zeitlimit
+285|Auf einen Ordner beschränkt
+286|Schlüssel
+287|Schlüssel
+288|Später
+289|Beim Start öffnen
+290|Lass ein Feld leer, um den Wert aus php.ini zu verwenden (grau dargestellt). Gesichert in
+291|Lässt andere den Bildschirm dieses Mac mit der App „Bildschirmfreigabe“ oder einem beliebigen VNC-Viewer sehen und steuern. Verwendet den in macOS integrierten Server. Änderungen erfordern das Passwort eines Administrators.
+292|Lässt Benutzer dieses Mac sich von anderen Computern mit ssh anmelden und Dateien mit scp oder SFTP kopieren. Verwendet den in macOS integrierten OpenSSH-Server (Entfernte Anmeldung). Änderungen erfordern das Passwort eines Administrators.
+293|Limit
+294|Lauscht auf
+295|Geladene Erweiterungen
+296|Verfügbare Versionen werden geladen …
+297|Wird geladen …
+298|Lokaler DNS-Server (dnsmasq)
+299|Lokale Domain
+300|Lokale Domains
+301|Lokaler Hostname
+302|Lokale IP-Adresse
+303|Ortungsdienste
+304|Der Ortungszugriff für Server ist ausgeschaltet
+305|Protokollstufe
+306|Jede Abfrage protokollieren (Protokolle › DNS)
+307|Jeden Schreibvorgang auf Datenträger protokollieren
+308|Mit diesem Schlüssel als %@ anmelden
+309|Protokollierung
+310|Protokolle
+311|Nachschlagen
+312|Mac-Benutzer verbinden sich mit ihrem eigenen Account. Ein VNC-Passwort ist für andere VNC-Viewer (Windows, Linux, iPad-Apps); VNC verwendet nur die ersten 8 Zeichen, daher ist in Netzwerken ohne Vertrauen die App „Bildschirmfreigabe“ vorzuziehen.
+313|Als Standard festlegen
+314|Als Standard-CLI-Version festlegen
+315|Von Server verwaltet
+316|Max. zulässiges Paket
+317|Max. Clients
+318|Max. Verbindungen
+319|Max. Request-Worker
+320|Max. Upload-Größe
+321|Max. pro Adresse
+322|Darf den Bildschirm mit einem Passwort steuern
+323|Arbeitsspeicher
+324|Speicher und Limits
+325|Im Dock
+326|Modell
+327|Modellname
+328|Module
+329|Meine Website
+330|Mein Entwicklungsserver
+331|Neuestes MySQL (mysql)
+332|MySQL lauscht nur auf diesem Mac (127.0.0.1). Der Benutzer root hat kein Passwort; jede Website erhält einen eigenen Benutzer.
+333|Name
+334|Namen, die der Server nicht kennt, werden bei diesen Servern nachgeschlagen.
+335|NetBIOS-Name
+336|Netzwerk
+337|Netzwerkname:
+338|Netzwerkdienste
+339|Neue Datenbank
+340|Neuer FTP-Benutzer
+341|Neuer Hosts-Eintrag
+342|Neues Passwort
+343|Neue SSH- und SFTP-Verbindungen zu diesem Mac werden abgelehnt. Bereits geöffnete Sitzungen bleiben bis zu ihrem Ende verbunden.
+344|Neue Website
+345|Neuere Versionen dieser Erweiterungen unterstützen PHP %@ möglicherweise nicht. Schlägt eine Installation fehl, liegt es meist daran.
+346|Nginx ist noch nicht installiert.
+347|Noch keine FTP-Benutzer.
+348|Noch keine Node.js-Versionen installiert.
+349|Noch keine PHP-Versionen installiert. Wähle unter „Version installieren“ eine aus.
+350|Keine Websites
+351|Noch keine Firewallregeln für Apps.
+352|Dieser Website sind noch keine Datenbanken zugewiesen. Erstelle eine, und Server legt einen eigenen MySQL-Benutzer mit Zugriff darauf an.
+353|Noch keine Datenbanken.
+354|Es werden keine Ordner geteilt.
+355|Noch keine Schlüssel. Du kannst dich weiterhin mit deinem Mac-Passwort anmelden.
+356|Keine lokalen Domains.
+357|Keine passenden Module.
+358|Kein php im PATH
+359|Keine Einträge. Füge A-, AAAA-, CNAME-, TXT- oder MX-Einträge für bestimmte Namen hinzu.
+360|Keine Regel
+361|Keine gesicherten Adressen.
+362|Keine Speichergeräte gefunden.
+363|Noch keine Websites.
+364|Node.js %@ — nicht installiert
+365|Node.js-App
+366|Node.js-Version
+367|Node.js-Versionen mit nvm
+368|Keine
+369|Keine (nur statische Dateien)
+370|Keine (nur dieser Mac)
+371|Keiner Website zugewiesen
+372|Nicht mit einem Netzwerk verbunden
+373|Nicht installiert
+374|Nicht installiert — wird beim ersten Start automatisch installiert
+375|Nicht installiert. Wird beim ersten Teilen automatisch installiert.
+376|Nicht erforderlich
+377|Nicht erforderlich (jeder Wert genügt)
+378|Läuft nicht
+379|Nicht auf dem Datenträger gesichert (geht beim Stoppen von Redis verloren)
+380|Nicht geteilt
+381|Aus
+382|Aus (einfaches FTP)
+383|Ein
+384|Ein (Apple Remote Desktop)
+385|Ein · Alle eingehenden Verbindungen werden blockiert
+386|Ein · smb://%@
+387|Ein · ssh %@@%@
+388|Ein Wert pro Zeile: eine IP-Adresse, ein Bereich (192.168.1.0/24), unix: oder all. Lass allow leer, um alle zuzulassen.
+389|Nur diese Benutzer
+390|Nur dieser Mac kann es öffnen. Schalte den Netzwerkzugriff in den Einstellungen ein, um es von anderen Geräten zu verwenden.
+391|Nur dieser Mac kann den Server abfragen. Schalte den Netzwerkzugriff in den Einstellungen ein, um andere Geräte zu bedienen.
+392|Funktioniert nur, wenn der DNS-Server Port 53 verwendet
+393|Öffnen
+394|GitHub öffnen
+395|Datenschutzeinstellungen öffnen …
+396|Im Browser öffnen
+397|Im Browser öffnen
+398|OpenAI-kompatible API für das Apple Foundation Model auf dem Gerät
+399|Öffnet eine temporäre öffentliche Adresse (trycloudflare.com) für den Chat, mit HTTPS, damit du ihn unterwegs nutzen kannst, ohne den Router zu ändern.
+400|Optional
+401|Optionaler Systemprompt, z. B. Antworte kurz.
+402|Optionen
+403|Optionen für die Direktive <Directory>
+404|Weitere Adressen
+405|Weitere Schnittstellen
+406|Weitere Datenbanken auf diesem Server
+407|Andere Geräte können diesen Mac als DNS-Server verwenden, indem sie ihn in ihren Netzwerkeinstellungen eintragen.
+408|Andere Geräte melden sich mit Mac-Passwörtern über einfaches HTTP an. Jeder im selben Netzwerk könnte sie mitlesen. Verwende dies nur in einem vertrauenswürdigen Netzwerk oder lass den Netzwerkzugriff aus.
+409|Andere Version, z. B. 20.11.1
+410|Übersicht
+411|PECL-Erweiterungen
+412|PHP-Version
+413|PHP-Versionen von Homebrew
+414|Passive Adresse
+415|Passive Ports
+416|Der Passivmodus nutzt pro Übertragung einen Port aus diesem Bereich; öffne sie im Router, um FTP aus dem Internet zu erlauben.
+417|Passwort
+418|Passwort …
+419|Füge den Inhalt des öffentlichen Schlüssels des anderen Computers ein, z. B. ~/.ssh/id_ed25519.pub.
+420|Peers
+421|Leistung
+422|Richte jede App oder Bibliothek, die mit OpenAI spricht, auf diese Basis-URL. Jeder Modellname funktioniert; Anfragen beantwortet Apple Intelligence auf diesem Mac, sodass nichts ihn verlässt. Erfordert einen Mac mit eingeschalteter Apple Intelligence.
+423|Hostnamen auf eine Adresse zeigen lassen
+424|Port
+425|Ports
+426|Priorität
+427|Prompt
+428|Öffentliche IP-Adresse
+429|Öffentliche Schlüssel, die sich ohne Passwort als %@ anmelden können (~/.ssh/authorized_keys).
+430|Pure-FTPd ist noch nicht installiert.
+431|Schnelle Tunnel nutzen den kostenlosen Dienst trycloudflare.com von Cloudflare: ohne Account und ohne Routereinstellungen.
+432|Erreichbarkeit
+433|Schreibgeschützt
+434|Statistiken werden gelesen …
+435|Einträge
+436|Weiterleitung
+437|HTTP-Anfragen auf HTTPS umleiten
+438|Redis %@ · %@
+439|Redis-Verbindungen sind nicht verschlüsselt. Nutze den Netzwerkzugriff nur in einem vertrauenswürdigen Netzwerk.
+440|Neu erzeugen
+441|Neu laden
+442|Entfernte Anmeldung
+443|Entfernte Anmeldung (OpenSSH)
+444|Entfernte Verwaltung
+445|Entfernen
+446|%@ entfernen?
+447|%@ entfernen …
+448|Adresse entfernen
+449|Domain entfernen
+450|Eintrag entfernen
+451|Schlüssel entfernen
+452|Eintrag entfernen
+453|Regel entfernen
+454|Benutzer entfernen
+455|Schlüssel entfernen
+456|Regel entfernen
+457|FTP-Benutzer „%@“ entfernen?
+458|Benutzer entfernen
+459|„%@“ aus der Firewall entfernen?
+460|Anfragen
+461|Verlangen
+462|Verschlüsselung verlangen
+463|Von macOS erforderlich
+464|Erforderlich — siehe Einstellungen
+465|Antwort
+466|Neu starten
+467|Starte FTP neu, um deine Änderungen anzuwenden.
+468|Jetzt neu starten
+469|Starte Redis neu, um deine Änderungen anzuwenden.
+470|Server wird neu gestartet …
+471|Standardwerte wiederherstellen
+472|Im Finder zeigen
+473|Zurücksetzen
+474|Ausführen
+475|Läuft
+476|Läuft für Websites
+477|Läuft auf Port %@
+478|Läuft mit
+479|Führt Befehle wie redis-cli aus, zum Beispiel SET greeting hello, GET greeting oder KEYS *.
+480|Laufzeit
+481|SQL-Modus
+482|Sichern
+483|Änderungen sichern …
+484|Jetzt sichern
+485|Snapshots auf dem Datenträger sichern
+486|Auf dem Datenträger gesichert
+487|Sicherung
+488|Bildschirmfreigabe
+489|Protokoll auswählen
+490|Selbstsigniert (von Server erzeugt)
+491|Senden
+492|*.%@-Abfragen dieses Mac an diesen Server senden
+493|Einen Ordner auf diesem Mac bereitstellen
+494|Die Chat-Web-App unter der Serveradresse bereitstellen
+495|An Geräte ausgeliefert
+496|Server
+497|Server %@ ist verfügbar. Du hast Version %@.
+498|Server %@ ist verfügbar. Du hast Version %@. Möchtest du es jetzt installieren? Server wird danach neu gestartet.
+499|Server %@ ist die neueste verfügbare Version.
+500|Serveradresse
+501|Server-Admin
+502|Serversoftware
+503|Server Tokens
+504|Server öffnet sich nicht bei der Anmeldung.
+505|Server öffnet sich bei der Anmeldung im Vollbild.
+506|Server öffnet sich bei der Anmeldung im Dock minimiert.
+507|Server führt diesen Befehl im Website-Ordner aus, solange %@ läuft, mit gesetztem PORT, und leitet Anfragen für %@ an ihn weiter.
+508|Server
+509|Dienste
+510|Passwort festlegen
+511|Passwort festlegen …
+512|Einstellungen
+513|Einstellungen …
+514|Teilen
+515|%@ im Internet teilen?
+516|Ordner teilen
+517|Freigabename
+518|Online teilen
+519|Teile alles andere, das auf diesem Mac läuft, etwa einen Entwicklungsserver. Nur Adressen auf diesem Mac sind erlaubt.
+520|Dateien und Ordner per SMB teilen
+521|Teile Ordner mit anderen Macs und PCs in deinem Netzwerk, wie Allgemein › Teilen in den Systemeinstellungen. Änderungen erfordern das Passwort eines Administrators.
+522|Inhalte dieses Mac mit Schnelltunneln online teilen
+523|Geteilte Inhalte
+524|Geteilte Ordner
+525|Im Internet geteilt
+526|Freigabeeinstellungen …
+527|Das Teilen endet, wenn du Server beendest.
+528|Einblenden
+529|Ausgabe zeigen
+530|Geteilte Ordner zeigen …
+531|Im Finder zeigen
+532|Anmelden
+533|Websites, die ihre eigene Adresse fest einprogrammiert haben, etwa WordPress, schicken Besucher möglicherweise dorthin.
+534|Diese Version überspringen
+535|Snapshots
+536|Snapshots sichern die Daten ab und zu und beim Stoppen von Redis. Die Append-only-Datei protokolliert jeden Schreibvorgang (langsamer, sicherer).
+537|Socket
+538|Einige Websites benötigen Hosts-Einträge
+539|Etwas, das auf diesem Mac läuft
+540|Quelle
+541|Starten
+542|Starte zuerst %@ und teile es dann.
+543|Startbefehl
+544|Starte Redis, um Befehle auszuführen.
+545|Starte den DNS-Server, um Namen nachzuschlagen.
+546|Starte den Server, um ihn auszuprobieren.
+547|Wird gestartet …
+548|Startet, wenn eine Website es nutzt
+549|Beginnt mit %@
+550|Status
+551|Stoppen
+552|Alle stoppen
+553|Teilen beenden
+554|Alle Dienste stoppen, wenn Server beendet wird
+555|Teilen beenden
+556|„%@“ nicht mehr teilen?
+557|Gestoppt
+558|Wird gestoppt …
+559|Speicher
+560|Ziel
+561|Terminal
+562|Text
+563|Die API im OpenAI-Stil ist über den Link mit deinem API-Schlüssel erreichbar.
+564|Die API im OpenAI-Stil bleibt im Internet geschlossen, bis du in KI-Modelle › Einstellungen einen API-Schlüssel setzt.
+565|Die API im OpenAI-Stil bleibt im Internet geschlossen, bis du in den Einstellungen einen API-Schlüssel setzt.
+566|Die Konfiguration wird entfernt. Dateien im Dokumentenstamm und zugewiesene Datenbanken bleiben erhalten.
+567|Die Standardversion ist das `php`, das Terminal, Composer und andere Werkzeuge verwenden. Websites behalten ihre eigene Version.
+568|Die geladene App hat Version %@, nicht %@.
+569|Die Codesignatur der geladenen App ist ungültig.
+570|Das geladene Disk-Image enthält Server nicht.
+571|Beim ersten Verbinden zeigt ssh den Schlüssel-Fingerabdruck dieses Mac; er sollte einem dieser entsprechen.
+572|Der Ordner und seine Dateien bleiben, wo sie sind.
+573|Die öffentliche Adresse wird über ipify.org ermittelt. Ob andere diesen Mac erreichen können, hängt auch von Router und Firewall ab.
+574|Ihr Ordner und ihre Dateien bleiben erhalten.
+575|Diese Server
+576|Dieser Mac und Geräte im Netzwerk
+577|Nur dieser Mac
+578|DNS-Server dieses Mac
+579|Dies ist die Standard-PHP im Terminal
+580|Dies ist die Standard-PHP im Terminal. Wähle zuerst einen anderen Standard.
+581|Diese Website wird von %@ bereitgestellt. Diese %@-Einstellungen bleiben erhalten und gelten, wenn du auf %@ wechselst.
+582|Zeitlimit
+583|Im Schlüsselbund vertrauen …
+584|Das Vertrauen in das Zertifikat beseitigt Browserwarnungen für diese Website. macOS fragt nach deinem Passwort.
+585|Ausprobieren
+586|Ausschalten
+587|Ausschalten …
+588|Entfernte Anmeldung ausschalten?
+589|Entfernte Verwaltung ausschalten?
+590|Bildschirmfreigabe ausschalten?
+591|Diese Website ausschalten
+592|Schalte die Chat-Web-App in KI-Modelle › Einstellungen ein, um sie zu teilen.
+593|Diese Website einschalten
+594|Schalte diese Website ein, um sie zu teilen.
+595|Typ
+596|Von Website lösen
+597|Nicht zugewiesen
+598|Deinstallieren
+599|Node.js %@ deinstallieren?
+600|Deinstalliert diese Version mit Homebrew. Ihre Einstellungen bleiben erhalten, und mitgebrachte Pakete bleiben installiert.
+601|Läuft seit %@
+602|Aktuell
+603|Aktualisieren
+604|Updates
+605|Server wird aktualisiert
+606|Laufzeit seit Start
+607|In deinen Apps verwenden
+608|Namen aus dem Computernamen ableiten
+609|Verwende einen Namen, den du im Internet nicht brauchst, etwa test oder localhost. Vermeide .local, das macOS für Bonjour verwendet.
+610|Verwende eine http- oder https-Adresse auf diesem Mac, etwa http://localhost:3000 oder https://myapp.localhost:8443. Selbstsignierte HTTPS-Zertifikate werden akzeptiert.
+611|Standard verwenden (%@)
+612|Auf diesem Mac verwenden
+613|Belegt
+614|Von %lld Website%@ verwendet. Stelle sie zuerst auf eine andere Version um.
+615|Von jeder %@-Website verwendet, die keine eigenen Ports festlegt.
+616|Von Websites verwendet
+617|Benutzer
+618|Benutzername
+619|Benutzer
+620|Verwendet ein selbstsigniertes Zertifikat, das für diesen Mac erstellt wurde. FTP-Clients bitten dich beim ersten Mal, ihm zu vertrauen.
+621|VNC-Passwort
+622|VNC-Viewer
+623|VNC verwendet nur die ersten 8 Zeichen.
+624|Version
+625|Die Versionen kommen über nvm von nodejs.org.
+626|Version ansehen
+627|Web-App
+628|Webserver
+629|Website
+630|Website-Einstellungen
+631|Website aktiviert
+632|Website-Einstellungen
+633|Websites
+634|Bei voller Auslastung
+635|Wenn aus, laufen Dienste nach dem Beenden im Hintergrund weiter, wie bei macOS Server.
+636|Wenn gesetzt, müssen Anfragen ihn als „Authorization: Bearer <Schlüssel>“ senden, wie bei OpenAI. Empfohlen, wenn sich andere Geräte verbinden können.
+637|Wer den Ordner öffnen darf, richtet sich weiterhin nach den Dateiberechtigungen. macOS fragt nach dem Passwort eines Administrators.
+638|Mit einem Mac-Benutzernamen und -Passwort. Jede Person hat ihre eigenen Chats.
+639|Bei eingeschaltetem Netzwerkzugriff werden Mac-Passwörter bei der Anmeldung unverschlüsselt (einfaches HTTP) gesendet.
+640|Verbindungen pro Worker
+641|Worker-Prozesse
+642|Worker
+643|Arbeitsgruppe
+644|Du kannst Server %@ stattdessen von GitHub laden.
+645|Du kannst sie später erneut installieren.
+646|Du hast ungesicherte Änderungen an der Hosts-Datei.
+647|Du bist auf dem neuesten Stand
+648|Deine autorisierten Schlüssel
+649|E-Mail-Adresse oder leer
+650|iCloud-Inhalte
+651|macOS-Firewall für Apps
+652|macOS-Dateifreigabe (SMB)
+653|macOS fragt erneut, wenn es das nächste Mal versucht, eingehende Verbindungen zu akzeptieren.
+654|macOS benötigt Ortungszugriff, um ihn anzuzeigen
+655|macOS listet geteilte Ordner nur für Administratoren auf.
+656|node ist im Terminal noch nicht verfügbar.
+658|nvm installiert Node.js-Versionen und wechselt zwischen ihnen. Server installiert es mit Homebrew.
+659|nvm ist nicht installiert.
+660|nvm wird in neuen Terminal-Fenstern geladen (~/.zshrc)
+661|von %@
+662|Sekunden
+663|Server-Standard
+664|bis
+665|unbekannt
+666|„all granted“ oder pro Zeile eine IP-Adresse / ein Bereich (z. B. 127.0.0.1).
+667|%lld Website%@
+668|%lld Benutzer
+669|Peers: %lld, Parents: %lld
+670|%@ verfügbar
+671|Mit dem Internet verbunden
+672|Nur lokales Netzwerk
+673|Keine Netzwerkverbindung
