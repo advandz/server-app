@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Support/AppIcon.png" width="128" height="128" alt="Server app icon">
+</p>
+
 <h1 align="center">Server</h1>
 
 <p align="center">A native macOS app that replaces macOS Server, running websites, databases, DNS, FTP and more through Homebrew.</p>
