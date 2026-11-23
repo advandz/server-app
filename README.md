@@ -32,6 +32,32 @@ Download the latest `Server-x.y.z.dmg` from [Releases](https://github.com/advand
 
 Runs natively on Apple silicon and Intel. It isn't notarized, so if macOS can't verify it, choose **Open Anyway** in **System Settings → Privacy & Security**.
 
+## macOS Gatekeeper
+
+Server isn't notarized by Apple, so macOS Gatekeeper may stop it the first time you open it. You may see a message such as:
+
+- “Server” is damaged and can't be opened. You should move it to the Trash.
+- “Server” can't be opened because Apple cannot check it for malicious software.
+- “Server” is not safe to open.
+
+The download isn't corrupt. macOS marks every app downloaded from the internet as quarantined, and Gatekeeper blocks quarantined apps that aren't notarized.
+
+**To open it**
+
+1. Drag **Server** to **Applications**, then open it. When macOS blocks it, click **Done** (not **Move to Trash**).
+2. Open **System Settings → Privacy & Security** and scroll down to **Security**.
+3. Next to the message about Server, click **Open Anyway**, then confirm with your password or Touch ID.
+
+**If it says the app is damaged**
+
+That message has no **Open Anyway** button. Remove the quarantine flag in Terminal, then open the app normally:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Server.app"
+```
+
+If the app isn't in **Applications**, use its actual path. Only do this for a copy you downloaded from this repository's [Releases](https://github.com/advandz/server-app/releases) page.
+
 ## Build from source
 
 ```bash
