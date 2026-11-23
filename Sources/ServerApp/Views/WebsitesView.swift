@@ -295,23 +295,30 @@ struct NewSiteSheet: View {
             }
 
             """
-            let server = """
+            let page = DefaultSitePage.html(name: name, hostname: hostname.lowercased(), root: root, server: server,
+                                            runtimeText: "Node.js", runtimeDetail: DefaultSitePage.runtimeToken)
+            let pageLiteral = (try? String(data: JSONSerialization.data(withJSONObject: [page]), encoding: .utf8))
+                .map { String($0.dropFirst().dropLast()) } ?? "\"\""
+            let serverJS = """
             const http = require('http');
             const port = process.env.PORT || \(port);
+            const page = \(pageLiteral).replace('\(DefaultSitePage.runtimeToken)', 'Running Node.js ' + process.version + '.');
             http.createServer((req, res) => {
               res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-              res.end('<h1>\(name.replacingOccurrences(of: "'", with: ""))</h1><p>Node.js ' + process.version + '</p>');
+              res.end(page);
             }).listen(port, '127.0.0.1');
 
             """
             try? pkg.write(toFile: root + "/package.json", atomically: true, encoding: .utf8)
-            try? server.write(toFile: root + "/server.js", atomically: true, encoding: .utf8)
+            try? serverJS.write(toFile: root + "/server.js", atomically: true, encoding: .utf8)
         } else if !fm.fileExists(atPath: root) {
             try? fm.createDirectory(atPath: root, withIntermediateDirectories: true)
-            let starter = php.isEmpty
-                ? "<!doctype html><title>\(name)</title><h1>\(name)</h1><p>Served by Server.</p>\n"
-                : "<?php\necho '<h1>\(name.replacingOccurrences(of: "'", with: ""))</h1>';\nphpinfo();\n"
-            try? starter.write(toFile: root + (php.isEmpty ? "/index.html" : "/index.php"), atomically: true, encoding: .utf8)
+            let isPHP = !php.isEmpty
+            var page = DefaultSitePage.html(name: name, hostname: hostname.lowercased(), root: root, server: server,
+                                            runtimeText: isPHP ? "PHP" : "Static files",
+                                            runtimeDetail: isPHP ? DefaultSitePage.runtimeToken : "Plain HTML, CSS and JavaScript files are served as they are.")
+            if isPHP { page = page.replacingOccurrences(of: DefaultSitePage.runtimeToken, with: "Running PHP <?= PHP_VERSION ?>.") }
+            try? page.write(toFile: root + (isPHP ? "/index.php" : "/index.html"), atomically: true, encoding: .utf8)
         }
         var site = Website(name: name, hostname: hostname.lowercased(), documentRoot: root, server: server, phpFormula: php)
         site.runtime = runtime
