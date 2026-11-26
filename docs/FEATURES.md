@@ -22,8 +22,10 @@ Server runs web, database and network services on your Mac using [Homebrew](http
 |---|---|
 | **Apache, Nginx, MySQL** | Start, stop and restart, ports, basic settings, Apache modules and Nginx features |
 | **Redis** | Settings, live statistics and a small console. Network access needs a password |
+| **Object Caching** | Memcached: memory limit, port, network access, log level, live statistics and Flush Cache |
 | **FTP** | Pure-FTPd with separate FTP users, each locked in its own folder |
 | **DNS** | dnsmasq with wildcard local domains such as `*.test`, records and forwarding |
+| **Mail** | SMTP through macOS's built-in Postfix and IMAP through Dovecot, with domains, accounts and aliases. A **Sandbox** option swaps the real SMTP server for Mailpit on the same port, to catch test mail |
 | **SSH** | macOS Remote Login: who can log in, and your authorized keys |
 | **File Sharing** | macOS SMB sharing: shared folders and guest access |
 | **Screen Sharing** | macOS's built-in VNC server and Remote Management |

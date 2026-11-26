@@ -100,11 +100,14 @@ enum DNSServer {
         }
         c += "\n# Records\n"
         for r in s.records where isValidName(r.name) && !r.value.isEmpty {
+            // Values go into the config as they are, so each kind must hold only what it should.
             switch r.kind {
-            case .a, .aaaa: c += "host-record=\(r.name),\(r.value)\n"
-            case .cname: c += "cname=\(r.name),\(r.value)\n"
-            case .txt: c += "txt-record=\(r.name),\"\(r.value.replacingOccurrences(of: "\"", with: ""))\"\n"
-            case .mx: c += "mx-host=\(r.name),\(r.value),\(r.priority)\n"
+            case .a, .aaaa: if HostEntry.isValidAddress(r.value) { c += "host-record=\(r.name),\(r.value)\n" }
+            case .cname: if isValidName(r.value) { c += "cname=\(r.name),\(r.value)\n" }
+            case .txt:
+                let text = r.value.filter { !$0.isNewline && $0 != "\"" && $0 != "\0" }
+                if !text.isEmpty { c += "txt-record=\(r.name),\"\(text)\"\n" }
+            case .mx: if isValidName(r.value) { c += "mx-host=\(r.name),\(r.value),\(min(max(r.priority, 0), 65535))\n" }
             }
         }
         return c

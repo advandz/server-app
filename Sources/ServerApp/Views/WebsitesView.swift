@@ -248,19 +248,29 @@ struct NewSiteSheet: View {
                     }
                 }
             }
-            Text("Host names ending in .localhost work in browsers without any extra setup.")
-                .font(.caption).foregroundStyle(.secondary)
+            if let problem {
+                Text(verbatim: problem).font(.caption).foregroundStyle(.red)
+            } else {
+                Text("Host names ending in .localhost work in browsers without any extra setup.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Create") { create() }
                     .keyboardShortcut(.defaultAction)
                     .glassButton(prominent: true)
-                    .disabled(name.isEmpty || hostname.isEmpty || docRoot.isEmpty)
+                    .disabled(name.isEmpty || hostname.isEmpty || docRoot.isEmpty || problem != nil)
             }
         }
         .padding(26)
         .frame(width: 560)
+    }
+
+    /// What's wrong with the host name or folder, so it never reaches a server config.
+    private var problem: String? {
+        guard !hostname.isEmpty, !docRoot.isEmpty else { return nil }
+        return Website(name: name, hostname: hostname.lowercased(), documentRoot: (docRoot as NSString).expandingTildeInPath).configProblem
     }
 
     /// The first app port from 3000 up that no other Node.js site uses.

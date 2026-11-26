@@ -6,24 +6,28 @@ import Foundation
 /// FTP server settings (Homebrew pure-ftpd).
 struct FTPSettings: Codable, Hashable {
     var port = 21
+    var allowNetwork = false         // accept other devices; off = this Mac only
     var passiveFrom = 30000
     var passiveTo = 30009
     var maxClients = 20
     var maxPerIP = 5
     var tls = false                  // allow FTPS (explicit TLS) with a self-signed certificate
     var requireTLS = false
+    var certificateID: UUID? = nil   // a certificate from the Certificates page; nil = one Server generates
     var passiveAddress = ""          // address announced for passive mode (for NAT); empty = automatic
 
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         port = (try? c.decode(Int.self, forKey: .port)) ?? 21
+        allowNetwork = (try? c.decode(Bool.self, forKey: .allowNetwork)) ?? true   // settings saved before this option existed keep working as they did
         passiveFrom = (try? c.decode(Int.self, forKey: .passiveFrom)) ?? 30000
         passiveTo = (try? c.decode(Int.self, forKey: .passiveTo)) ?? 30009
         maxClients = (try? c.decode(Int.self, forKey: .maxClients)) ?? 20
         maxPerIP = (try? c.decode(Int.self, forKey: .maxPerIP)) ?? 5
         tls = (try? c.decode(Bool.self, forKey: .tls)) ?? false
         requireTLS = (try? c.decode(Bool.self, forKey: .requireTLS)) ?? false
+        certificateID = try? c.decodeIfPresent(UUID.self, forKey: .certificateID)
         passiveAddress = (try? c.decode(String.self, forKey: .passiveAddress)) ?? ""
     }
 }
@@ -37,6 +41,9 @@ enum FTPServer {
     static var passwdFile: String { dir + "/pureftpd.passwd" }
     static var pdbFile: String { dir + "/pureftpd.pdb" }
     static var certFile: String { Paths.ssl + "/ftp/pure-ftpd.pem" }
+    static var storedCertFile: String { Paths.ssl + "/ftp/stored.pem" }
+    /// The PEM pure-ftpd loads: the one Server generates, or a copy of a stored certificate.
+    static func certPath(_ s: FTPSettings) -> String { s.certificateID != nil ? storedCertFile : certFile }
     static var pidFile: String { Paths.run + "/pure-ftpd.pid" }
     static var transferLog: String { Paths.logs + "/ftp_transfer.log" }
     static var startLog: String { Paths.logs + "/ftp_start.log" }
@@ -53,7 +60,7 @@ enum FTPServer {
     static func arguments(_ s: FTPSettings) -> [String] {
         var args = [
             "-B",                                   // run in the background
-            "-S", ",\(s.port)",                     // all addresses, this port
+            "-S", "\(s.allowNetwork ? "" : "127.0.0.1"),\(s.port)",   // this port, on all addresses or this Mac only
             "-p", "\(s.passiveFrom):\(s.passiveTo)",
             "-g", pidFile,
             "-l", "puredb:\(pdbFile)",
@@ -66,7 +73,7 @@ enum FTPServer {
             "-O", "clf:\(transferLog)",
         ]
         if !s.passiveAddress.isEmpty { args += ["-P", s.passiveAddress] }
-        if s.tls { args += ["-Y", s.requireTLS ? "2" : "1", "-2", certFile] }
+        if s.tls { args += ["-Y", s.requireTLS ? "2" : "1", "-2", certPath(s)] }
         return args
     }
 

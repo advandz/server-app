@@ -134,6 +134,7 @@ struct FirewallView: View {
                                         ("FTP", FTPServer.binary(prefix: app.brew.prefix)),
                                         ("DNS", DNSServer.binary(prefix: app.brew.prefix)),
                                         ("Redis", RedisServer.binary(prefix: app.brew.prefix)),
+                                        ("Object Caching", MemcachedServer.binary(prefix: app.brew.prefix)),
                                         ("AI Models (Server)", Bundle.main.executablePath ?? "")]
             + app.phpRunning.sorted().map { (Homebrew.phpLabel($0, version: app.brew.version($0)) + " FPM", g.phpFPMBinary($0)) }
         return Card(title: "Server Software",
@@ -191,7 +192,7 @@ struct FirewallView: View {
 
     private func toggle(_ label: String, _ title: String, _ value: Bool, disabled: Bool = false,
                         _ args: @escaping (Bool) -> [String]) -> some View {
-        FormRow(label: "\(label)", labelWidth: 90) {
+        FormRow(label: LocalizedStringKey(label), labelWidth: 90) {
             Toggle(title, isOn: Binding(get: { value }, set: { apply([args($0)]) }))
                 .disabled(disabled || working)
         }

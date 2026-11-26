@@ -26,6 +26,10 @@ extension AppState {
         writeDefaultPage()
         await ensureCertificates()
         let g = generator
+        if let skipped = config.websites.first(where: { $0.enabled && $0.configProblem != nil }), let problem = skipped.configProblem {
+            let message = "\(skipped.name) isn't being served: \(problem)"
+            if notice != message { flash(message) }
+        }
 
         // Apache
         if FileManager.default.isExecutableFile(atPath: g.httpdBinary) {
@@ -78,7 +82,7 @@ extension AppState {
     // MARK: Certificates
 
     func ensureCertificates() async {
-        for site in config.websites where site.enabled && site.ssl.enabled && site.ssl.mode == .selfSigned {
+        for site in config.websites where site.enabled && site.ssl.enabled && site.ssl.mode == .selfSigned && site.isConfigSafe {
             let paths = ConfigGenerator.certificatePaths(site)
             let dir = (paths.cert as NSString).deletingLastPathComponent
             let sanFile = dir + "/names.txt"
@@ -132,6 +136,8 @@ extension AppState {
         case .dns: DNSServer.formula
         case .ai: AIServer.formula
         case .redis: RedisServer.formula
+        case .memcached: MemcachedServer.formula
+        case .mail: MailServer.formula
         }
         guard await brew.ensureInstalled(formula) else {
             errors[kind] = "Could not install \(formula) with Homebrew. See Overview → Activity for details."; return
@@ -144,8 +150,10 @@ extension AppState {
         case .mysql: [config.mysql.port]
         case .ftp: [config.ftp.port]
         case .dns: []          // checked below, over UDP
-        case .ai: [config.ai.port]
+        case .ai: config.ai.httpsEnabled ? [config.ai.port, config.ai.httpsPort] : [config.ai.port]
         case .redis: [config.redis.port]
+        case .memcached: [config.memcached.port]
+        case .mail: [config.mail.imapPort, config.mail.imapsPort] + MailServer.smtpPorts(config.mail)
         case .apache: config.ports(for: .apache).sorted()
         case .nginx: config.ports(for: .nginx).sorted()
         }
@@ -189,6 +197,10 @@ extension AppState {
             await startAI()
         case .redis:
             await startRedis()
+        case .memcached:
+            await startMemcached()
+        case .mail:
+            await startMail()
         }
         if kind == .apache || kind == .nginx {
             // Leave the "starting" state first so the sync sees this server as running.
@@ -211,10 +223,16 @@ extension AppState {
             _ = await Shell.run(g.nginxBinary, ["-c", ConfigGenerator.nginxConfFile, "-e", Paths.logs + "/nginx_error.log", "-s", "stop"])
             _ = await waitFor(pidFile: Paths.run + "/nginx.pid", alive: false)
         case .mysql:
-            let r = await Shell.run(g.mysqlBin("mysqladmin"), ["--socket=\(Paths.mysqlSocket)", "-uroot", "shutdown"])
+            let login = mysqlLogin(password: mysqlRootPassword)
+            let r = await Shell.run(g.mysqlBin("mysqladmin"), login.args + ["--socket=\(Paths.mysqlSocket)", "-uroot", "shutdown"])
+            login.cleanup()
             if !r.ok, let pid = ProcessInfoHelper.livePID(pidFile: ConfigGenerator.mysqlPIDFile) { kill(pid, SIGTERM) }
             _ = await waitFor(pidFile: ConfigGenerator.mysqlPIDFile, alive: false, timeout: 30)
             mysqlNeedsRestart = false
+        case .mail:
+            await stopMail()
+        case .memcached:
+            await stopMemcached()
         case .redis:
             // SIGTERM makes Redis save its data (when snapshots are on) before exiting.
             if let pid = ProcessInfoHelper.livePID(pidFile: RedisServer.pidFile) { kill(pid, SIGTERM) }
@@ -254,7 +272,7 @@ extension AppState {
     /// After upgrades. FTP isn't restarted automatically (it would ask for a password at launch).
     func restartRunningServices() async {
         for kind in ServiceKind.allCases where isRunning(kind) {
-            if kind == .ftp { ftpNeedsRestart = true } else { await restart(kind) }
+            if kind == .ftp { ftpNeedsRestart = true } else if kind == .mail { mailNeedsRestart = true } else { await restart(kind) }
         }
     }
 
@@ -344,6 +362,12 @@ extension AppState {
         process.arguments = AIServer.arguments(config.ai, prefix: brew.prefix)
         var env = ProcessInfo.processInfo.environment
         env["SERVER_AI_API_KEY"] = config.ai.apiKey
+        if config.ai.httpsEnabled {
+            let tls = await prepareAIHTTPS()
+            if let e = tls.error { errors[.ai] = e; return }
+            env["SERVER_AI_TLS_PASS"] = tls.passphrase
+        }
+        defer { try? FileManager.default.removeItem(atPath: AIServer.tlsBundle) }
         process.environment = env
         process.standardInput = FileHandle.nullDevice
         let log = FileHandle(forWritingAtPath: AIServer.startLog)
@@ -383,8 +407,19 @@ extension AppState {
     private func startFTP(restartingPID: pid_t? = nil) async {
         let prefix = brew.prefix
         if let e = await FTPServer.prepare(prefix: prefix) { errors[.ftp] = "Couldn't prepare FTP users:\n" + e; return }
-        if config.ftp.tls, let e = await FTPServer.ensureCertificate(hostName: SystemStatus.shared.hostName) {
-            errors[.ftp] = e; return
+        if config.ftp.tls {
+            if let id = config.ftp.certificateID {
+                // pure-ftpd wants the certificate chain and the key in one file.
+                let files = certificateFiles(id)
+                guard let chain = try? String(contentsOfFile: files.cert, encoding: .utf8),
+                      let key = try? String(contentsOfFile: files.key, encoding: .utf8) else {
+                    errors[.ftp] = String(localized: "The certificate chosen for FTP is missing. Pick another one in FTP › Settings."); return
+                }
+                try? FileManager.default.createDirectory(atPath: (FTPServer.storedCertFile as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+                FileManager.default.createFile(atPath: FTPServer.storedCertFile, contents: Data((chain + "\n" + key).utf8), attributes: [.posixPermissions: 0o600])
+            } else if let e = await FTPServer.ensureCertificate(hostName: SystemStatus.shared.hostName) {
+                errors[.ftp] = e; return
+            }
         }
         // Create the transfer log as this user, so root appends to a file the Logs page can clear.
         if !FileManager.default.fileExists(atPath: FTPServer.transferLog) {
@@ -438,8 +473,21 @@ extension AppState {
         mysqlNeedsRestart = false
     }
 
-    func mysql(_ sql: String) async -> ShellResult {
-        await Shell.run(generator.mysqlBin("mysql"), ["--socket=\(Paths.mysqlSocket)", "-uroot", "-N", "-B", "-e", sql])
+    /// Runs SQL as root. The SQL goes in through stdin and the password through a private option
+    /// file, so neither shows up in the process list. `password` nil means the saved root password.
+    func mysql(_ sql: String, password: String? = nil, socket: String = Paths.mysqlSocket) async -> ShellResult {
+        let login = mysqlLogin(password: password ?? mysqlRootPassword)
+        defer { login.cleanup() }
+        return await Shell.run(generator.mysqlBin("mysql"), login.args + ["--socket=\(socket)", "-uroot", "-N", "-B"], input: sql)
+    }
+
+    /// Option-file arguments carrying the password (none when it's empty), plus a cleanup to call afterwards.
+    func mysqlLogin(password: String) -> (args: [String], cleanup: () -> Void) {
+        guard !password.isEmpty else { return ([], {}) }
+        let file = Paths.run + "/mysql-login-\(UUID().uuidString).cnf"
+        let escaped = password.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        FileManager.default.createFile(atPath: file, contents: Data("[client]\npassword=\"\(escaped)\"\n".utf8), attributes: [.posixPermissions: 0o600])
+        return (["--defaults-extra-file=\(file)"], { try? FileManager.default.removeItem(atPath: file) })
     }
 
     func ensureMySQLRunning() async -> Bool {
@@ -503,4 +551,85 @@ extension AppState {
 
 extension ConfigGenerator {
     var mysqld: String { mysqlBin("mysqld") }
+}
+
+// MARK: - MySQL root password
+
+extension AppState {
+    /// The saved root password for the MySQL version in use ("" when it has none).
+    var mysqlRootPassword: String { config.mysqlRootPasswords[config.mysql.formula] ?? "" }
+
+    /// A SQL string literal.
+    static func sqlString(_ s: String) -> String {
+        "'" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'") + "'"
+    }
+
+    static func mysqlPasswordProblem(_ p: String) -> String? {
+        if p.contains("\n") || p.contains("\r") || p.contains("\0") { return String(localized: "The password can't contain line breaks.") }
+        if p.count > 128 { return String(localized: "Use at most 128 characters.") }
+        return nil
+    }
+
+    private func saveMySQLRootPassword(_ password: String) {
+        let formula = config.mysql.formula
+        update { $0.mysqlRootPasswords[formula] = password.isEmpty ? nil : password }
+    }
+
+    /// Changes the root password while MySQL runs, using the saved one to log in.
+    @discardableResult
+    func changeMySQLRootPassword(to new: String) async -> String? {
+        if let problem = Self.mysqlPasswordProblem(new) { return problem }
+        guard await ensureMySQLRunning() else { return errors[.mysql] ?? "MySQL is not running." }
+        let r = await mysql("ALTER USER 'root'@'localhost' IDENTIFIED BY \(Self.sqlString(new)); FLUSH PRIVILEGES;")
+        guard r.ok else {
+            if r.output.contains("Access denied") {
+                return String(localized: "MySQL didn't accept the password Server has saved for root. Use Reset Password instead.")
+            }
+            return r.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        saveMySQLRootPassword(new)
+        return nil
+    }
+
+    /// Sets a new root password without knowing the old one: MySQL restarts briefly with privilege
+    /// checks off, reachable only through a private socket on this Mac, then restarts normally.
+    @discardableResult
+    func resetMySQLRootPassword(to new: String) async -> String? {
+        if let problem = Self.mysqlPasswordProblem(new) { return problem }
+        guard !transitional.contains(.mysql) else { return String(localized: "MySQL is busy. Try again in a moment.") }
+        let g = generator
+        guard FileManager.default.fileExists(atPath: Paths.mysqlDataDir(config.mysql.formula) + "/mysql") else {
+            return String(localized: "MySQL hasn't been set up yet. Start it once first.")
+        }
+        let wasRunning = isRunning(.mysql)
+        if wasRunning { await stop(.mysql) }
+        if let pid = ProcessInfoHelper.livePID(pidFile: ConfigGenerator.mysqlPIDFile) {
+            kill(pid, SIGTERM)
+            _ = await waitFor(pidFile: ConfigGenerator.mysqlPIDFile, alive: false, timeout: 30)
+        }
+
+        transitional.insert(.mysql); states[.mysql] = .starting
+        // The recovery server skips the privilege tables, so keep its socket where only you can reach it.
+        let dir = Paths.run + "/reset-" + String(UUID().uuidString.prefix(8))
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let socket = dir + "/mysql.sock"
+        var error: String?
+        let r = await Shell.launchDaemon(g.mysqld, ["--defaults-file=\(ConfigGenerator.mysqlConfFile)", "--skip-grant-tables",
+                                                     "--skip-networking", "--socket=\(socket)", "--daemonize"],
+                                         logFile: Paths.logs + "/mysql_start.log")
+        if r.ok, await waitFor(pidFile: ConfigGenerator.mysqlPIDFile, alive: true, timeout: 30) {
+            let q = await mysql("FLUSH PRIVILEGES; ALTER USER 'root'@'localhost' IDENTIFIED BY \(Self.sqlString(new)); FLUSH PRIVILEGES;",
+                                password: "", socket: socket)
+            if !q.ok { error = q.output.trimmingCharacters(in: .whitespacesAndNewlines) }
+            if let pid = ProcessInfoHelper.livePID(pidFile: ConfigGenerator.mysqlPIDFile) { kill(pid, SIGTERM) }
+            _ = await waitFor(pidFile: ConfigGenerator.mysqlPIDFile, alive: false, timeout: 30)
+        } else {
+            error = String(localized: "MySQL didn't start in recovery mode.") + "\n" + ProcessInfoHelper.tail(Paths.logs + "/mysql_error.log", lines: 8)
+        }
+        try? FileManager.default.removeItem(atPath: dir)
+        transitional.remove(.mysql); refreshStates()
+        if error == nil { saveMySQLRootPassword(new) }
+        if wasRunning { await start(.mysql) }
+        return error
+    }
 }

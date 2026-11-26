@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="Server"
 BUNDLE_ID="com.local.serverapp"
-VERSION="1.0.1"
+VERSION="1.1.0"
 OUT="build/${APP_NAME}.app"
 
 echo "→ Compiling (arm64 + x86_64)…"

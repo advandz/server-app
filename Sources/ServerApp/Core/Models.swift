@@ -50,6 +50,21 @@ struct Website: Codable, Identifiable, Hashable {
     var apache = ApacheSiteOverrides()
     var nginx = NginxSiteOverrides()
 
+    /// Host name and aliases are plain host names, and the folder has no line breaks or quotes,
+    /// so they can be written into Apache, Nginx and OpenSSL configs as they are.
+    var isConfigSafe: Bool {
+        HostEntry.isValidName(hostname) && aliasList.allSatisfy(HostEntry.isValidName)
+            && !documentRoot.isEmpty && !documentRoot.contains { $0.isNewline || $0 == "\0" || $0 == "\"" || $0 == "\\" }
+    }
+
+    /// Why the site can't be served, or nil.
+    var configProblem: String? {
+        if !HostEntry.isValidName(hostname) { return "“\(hostname)” isn't a valid host name. Use letters, numbers, dots and hyphens." }
+        if let bad = aliasList.first(where: { !HostEntry.isValidName($0) }) { return "“\(bad)” isn't a valid alias." }
+        if !isConfigSafe { return "The folder path can't contain quotes, backslashes or line breaks." }
+        return nil
+    }
+
     var aliasList: [String] { aliases.split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init) }
     var allHostnames: [String] { [hostname] + aliasList }
     /// The PHP formula that serves this site; "" for static and Node.js sites.
@@ -62,9 +77,10 @@ struct Website: Codable, Identifiable, Hashable {
 }
 
 struct SSLSettings: Codable, Hashable {
-    enum Mode: String, Codable, CaseIterable { case selfSigned, custom }
+    enum Mode: String, Codable, CaseIterable { case selfSigned, custom, stored }
     var enabled = false
     var mode: Mode = .selfSigned
+    var certificateID: UUID? = nil          // for .stored: a certificate from the Certificates page
     var certificatePath = ""
     var keyPath = ""
     var redirectHTTP = false
@@ -152,6 +168,19 @@ struct MySQLSettings: Codable, Hashable {
     var customConfig = ""
 }
 
+/// Decodes one list entry without letting a single bad entry take the whole list down.
+private struct LossyElement<T: Decodable>: Decodable {
+    let value: T?
+    init(from decoder: Decoder) throws { value = try? T(from: decoder) }
+}
+
+private extension KeyedDecodingContainer {
+    /// The entries that decode; a missing or unreadable list is empty, and one broken entry is skipped.
+    func lossyList<T: Decodable>(_ type: T.Type, forKey key: Key) -> [T] {
+        ((try? decode([LossyElement<T>].self, forKey: key)) ?? []).compactMap(\.value)
+    }
+}
+
 struct AppConfig: Codable {
     var websites: [Website] = []
     var databases: [DatabaseRecord] = []
@@ -162,16 +191,24 @@ struct AppConfig: Codable {
     var dns = DNSSettings()
     var ai = AIServerSettings()
     var redis = RedisSettings()
+    var memcached = MemcachedSettings()
     var cloudflare = CloudflareSettings()
+    var webAllowNetwork = true                        // Apache and Nginx answer other devices, not just this Mac
     var stopServicesOnQuit = false
     var startupMode = StartupMode.none
+    var mysqlRootPasswords: [String: String] = [:]    // root password per MySQL version (empty = none)
+    var certificates: [StoredCertificate] = []
+    var mail = MailSettings()
+    var mailDomains: [MailDomain] = []
+    var mailAccounts: [MailAccount] = []
+    var mailAliases: [MailAlias] = []
 
     init() {}
     // Tolerant decoding so new fields never wipe an existing config.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        websites = (try? c.decode([Website].self, forKey: .websites)) ?? []
-        databases = (try? c.decode([DatabaseRecord].self, forKey: .databases)) ?? []
+        websites = c.lossyList(Website.self, forKey: .websites)
+        databases = c.lossyList(DatabaseRecord.self, forKey: .databases)
         apache = (try? c.decode(ApacheSettings.self, forKey: .apache)) ?? ApacheSettings()
         nginx = (try? c.decode(NginxSettings.self, forKey: .nginx)) ?? NginxSettings()
         mysql = (try? c.decode(MySQLSettings.self, forKey: .mysql)) ?? MySQLSettings()
@@ -179,14 +216,23 @@ struct AppConfig: Codable {
         dns = (try? c.decode(DNSSettings.self, forKey: .dns)) ?? DNSSettings()
         ai = (try? c.decode(AIServerSettings.self, forKey: .ai)) ?? AIServerSettings()
         redis = (try? c.decode(RedisSettings.self, forKey: .redis)) ?? RedisSettings()
+        memcached = (try? c.decode(MemcachedSettings.self, forKey: .memcached)) ?? MemcachedSettings()
         cloudflare = (try? c.decode(CloudflareSettings.self, forKey: .cloudflare)) ?? CloudflareSettings()
+        webAllowNetwork = (try? c.decode(Bool.self, forKey: .webAllowNetwork)) ?? true
         stopServicesOnQuit = (try? c.decode(Bool.self, forKey: .stopServicesOnQuit)) ?? false
         startupMode = (try? c.decode(StartupMode.self, forKey: .startupMode)) ?? .none
+        mysqlRootPasswords = (try? c.decode([String: String].self, forKey: .mysqlRootPasswords)) ?? [:]
+        certificates = c.lossyList(StoredCertificate.self, forKey: .certificates)
+        mail = (try? c.decode(MailSettings.self, forKey: .mail)) ?? MailSettings()
+        mailDomains = c.lossyList(MailDomain.self, forKey: .mailDomains)
+        mailAccounts = c.lossyList(MailAccount.self, forKey: .mailAccounts)
+        mailAliases = c.lossyList(MailAlias.self, forKey: .mailAliases)
     }
 
     func httpPort(_ site: Website) -> Int { site.customHTTPPort ?? (site.server == .apache ? apache.httpPort : nginx.httpPort) }
     func httpsPort(_ site: Website) -> Int { site.customHTTPSPort ?? (site.server == .apache ? apache.httpsPort : nginx.httpsPort) }
-    func sites(for server: WebServer) -> [Website] { websites.filter { $0.enabled && $0.server == server } }
+    /// Sites whose names would break or alter a generated config are left out of it.
+    func sites(for server: WebServer) -> [Website] { websites.filter { $0.enabled && $0.server == server && $0.isConfigSafe } }
 
     /// Ports each server will bind, used to detect collisions between Apache and Nginx.
     func ports(for server: WebServer) -> Set<Int> {

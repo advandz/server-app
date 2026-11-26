@@ -55,7 +55,7 @@ struct FTPOverviewTab: View {
             Card(title: "Connection",
                  footer: "FTP users are separate from your Mac accounts. Each one is locked inside its own folder and reads and writes files as you. Starting and stopping FTP asks for an administrator password.") {
                 FormRow(label: "Address") {
-                    Text("ftp://\(host)\(s.port == 21 ? "" : ":\(s.port)")").textSelection(.enabled)
+                    Text("ftp://\(s.allowNetwork ? host : "127.0.0.1")\(s.port == 21 ? "" : ":\(s.port)")").textSelection(.enabled)
                 }
                 FormRow(label: "Passive Ports") { Text("\(String(s.passiveFrom))–\(String(s.passiveTo))") }
                 FormRow(label: "Encryption") {
@@ -235,6 +235,7 @@ struct FTPSettingsTab: View {
             RestartBar()
             Card(title: "Ports", footer: "Passive mode uses one port per transfer from this range; open them in your router to allow FTP from the internet.") {
                 FormRow(label: "FTP Port") { NumberField(value: bind(\.port)) }
+                FormRow(label: "Network") { Toggle("Accept connections from other devices", isOn: bind(\.allowNetwork)) }
                 FormRow(label: "Passive Ports") {
                     HStack {
                         NumberField(value: bind(\.passiveFrom))
@@ -250,8 +251,14 @@ struct FTPSettingsTab: View {
                 FormRow(label: "Max Clients") { NumberField(value: bind(\.maxClients)) }
                 FormRow(label: "Max per Address") { NumberField(value: bind(\.maxPerIP)) }
             }
-            Card(title: "Encryption", footer: "Uses a self-signed certificate created for this Mac. FTP clients ask you to trust it the first time.") {
+            Card(title: "Encryption", footer: app.config.ftp.certificateID == nil
+                 ? "Uses a self-signed certificate created for this Mac. FTP clients ask you to trust it the first time."
+                 : "Uses a certificate from the Certificates page. Restart FTP after changing it.") {
                 FormRow(label: "FTPS") { Toggle("Allow encrypted connections (explicit TLS)", isOn: bind(\.tls)) }
+                FormRow(label: "Certificate") {
+                    CertificatePicker(selection: bind(\.certificateID), automaticTitle: "Automatic (self-signed by Server)")
+                        .disabled(!app.config.ftp.tls)
+                }
                 FormRow(label: "") {
                     Toggle("Require encryption", isOn: bind(\.requireTLS)).disabled(!app.config.ftp.tls)
                 }

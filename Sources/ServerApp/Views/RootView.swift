@@ -4,7 +4,7 @@
 import SwiftUI
 
 enum SidebarItem: String, Hashable, CaseIterable {
-    case overview, network, firewall, hosts, logs, websites, cloudflare, fileSharing, ftp, ssh, screenSharing, dns, ai, caching, apache, nginx, mysql, redis, php, node
+    case overview, network, firewall, hosts, certificates, logs, websites, cloudflare, fileSharing, ftp, ssh, screenSharing, dns, mail, cache, ai, caching, apache, nginx, mysql, redis, php, node
 
     @MainActor var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum SidebarItem: String, Hashable, CaseIterable {
         case .network: String(localized: "Network")
         case .firewall: String(localized: "Firewall")
         case .hosts: String(localized: "Hosts")
+        case .certificates: String(localized: "Certificates")
         case .logs: String(localized: "Logs")
         case .fileSharing: String(localized: "File Sharing")
         case .ftp: "FTP"
@@ -28,6 +29,8 @@ enum SidebarItem: String, Hashable, CaseIterable {
         case .nginx: "Nginx"
         case .mysql: "MySQL"
         case .redis: "Redis"
+        case .cache: String(localized: "Object Caching")
+        case .mail: String(localized: "Mail")
         }
     }
     var symbol: String {
@@ -36,6 +39,7 @@ enum SidebarItem: String, Hashable, CaseIterable {
         case .network: "network"
         case .firewall: "firewall"
         case .hosts: "list.bullet.rectangle"
+        case .certificates: "checkmark.seal"
         case .fileSharing: "folder.badge.person.crop"
         case .ftp: "arrow.up.arrow.down.square"
         case .ssh: "terminal"
@@ -52,6 +56,8 @@ enum SidebarItem: String, Hashable, CaseIterable {
         case .nginx: "bolt.horizontal"
         case .mysql: "cylinder.split.1x2"
         case .redis: "memorychip"
+        case .cache: "bolt.circle"
+        case .mail: "envelope"
         }
     }
     /// Realistic artwork, used instead of the symbol when available.
@@ -66,7 +72,7 @@ enum SidebarItem: String, Hashable, CaseIterable {
         }
     }
     var service: ServiceKind? {
-        switch self { case .apache: .apache; case .nginx: .nginx; case .mysql: .mysql; case .ftp: .ftp; case .dns: .dns; case .ai: .ai; case .redis: .redis; default: nil }
+        switch self { case .apache: .apache; case .nginx: .nginx; case .mysql: .mysql; case .ftp: .ftp; case .dns: .dns; case .ai: .ai; case .redis: .redis; case .cache: .memcached; case .mail: .mail; default: nil }
     }
 }
 
@@ -85,6 +91,7 @@ struct RootView: View {
                     row(.network)
                     row(.firewall)
                     row(.hosts)
+                    row(.certificates)
                     row(.logs)
                 }
                 Section("Services") {
@@ -95,6 +102,8 @@ struct RootView: View {
                     row(.ssh)
                     row(.screenSharing)
                     row(.dns)
+                    row(.mail)
+                    row(.cache)
                     row(.ai)
                     row(.caching)
                 }
@@ -119,6 +128,7 @@ struct RootView: View {
                 case .network: NetworkView()
                 case .firewall: FirewallView()
                 case .hosts: HostsView()
+                case .certificates: CertificatesView()
                 case .fileSharing: FileSharingView()
                 case .ftp: FTPView()
                 case .ssh: SSHView()
@@ -135,6 +145,8 @@ struct RootView: View {
                 case .nginx: NginxView()
                 case .mysql: MySQLView()
                 case .redis: RedisView()
+                case .mail: MailView()
+                case .cache: MemcachedView()
                 }
                 if let notice = app.notice {
                     Text(notice)

@@ -93,6 +93,16 @@ extension AIOverviewTab {
                         .glassButton().disabled(!app.isRunning(.ai))
                 }
             }
+            if s.httpsEnabled {
+                let secure = "https://\(s.allowNetwork ? host : "127.0.0.1"):\(s.httpsPort)/"
+                FormRow(label: "Secure Address") {
+                    HStack(spacing: 10) {
+                        CopyText(text: secure)
+                        Button("Open") { if let url = URL(string: secure.replacingOccurrences(of: host, with: "127.0.0.1")) { NSWorkspace.shared.open(url) } }
+                            .glassButton().disabled(!app.isRunning(.ai))
+                    }
+                }
+            }
             FormRow(label: "Sign In") { Text("With a Mac user name and password. Each person has their own chats.").foregroundStyle(.secondary) }
             FormRow(label: "Chats") { PathText(path: AIServer.chatsDir) }
         }
@@ -208,6 +218,17 @@ struct AISettingsTab: View {
                 }
                 FormRow(label: "Model Name") {
                     TextField("apple-foundation-model", text: $draft.modelName).textFieldStyle(.roundedBorder).frame(width: 260)
+                }
+            }
+            Card(title: "HTTPS",
+                 footer: draft.certificateID == nil
+                 ? "Uses a self-signed certificate for this Mac's names. Browsers warn about it until you trust it in Certificates, or choose a certificate you own."
+                 : "Uses a certificate from the Certificates page.") {
+                FormRow(label: "HTTPS") { Toggle("Also serve the API and chat web app over HTTPS", isOn: $draft.httpsEnabled) }
+                FormRow(label: "Port") { NumberField(value: $draft.httpsPort).disabled(!draft.httpsEnabled) }
+                FormRow(label: "Certificate") {
+                    CertificatePicker(selection: $draft.certificateID, automaticTitle: "Automatic (self-signed by Server)")
+                        .disabled(!draft.httpsEnabled)
                 }
             }
             Card(title: "Chat Web App",

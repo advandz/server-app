@@ -72,7 +72,7 @@ extension AIHTTPServer {
     }
 
     private static func isHTTPS(_ req: Request) -> Bool {
-        req.headers["x-forwarded-proto"]?.lowercased() == "https" || (req.headers["cf-visitor"] ?? "").contains("https")
+        req.secure || req.headers["x-forwarded-proto"]?.lowercased() == "https" || (req.headers["cf-visitor"] ?? "").contains("https")
     }
 
     private func login(_ req: Request, _ conn: NWConnection) async -> Int {

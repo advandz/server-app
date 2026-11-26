@@ -11,6 +11,9 @@ struct AIServerSettings: Codable, Hashable {
     var apiKey = ""                         // empty = no key required
     var modelName = "apple-foundation-model"
     var webChat = true                      // serve the chat web app at /
+    var httpsEnabled = false                // also serve everything over HTTPS
+    var httpsPort = 8443
+    var certificateID: UUID? = nil          // a certificate from the Certificates page; nil = one Server generates
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -20,6 +23,9 @@ struct AIServerSettings: Codable, Hashable {
         apiKey = (try? c.decode(String.self, forKey: .apiKey)) ?? ""
         modelName = (try? c.decode(String.self, forKey: .modelName)) ?? "apple-foundation-model"
         webChat = (try? c.decode(Bool.self, forKey: .webChat)) ?? true
+        httpsEnabled = (try? c.decode(Bool.self, forKey: .httpsEnabled)) ?? false
+        httpsPort = (try? c.decode(Int.self, forKey: .httpsPort)) ?? 8443
+        certificateID = try? c.decodeIfPresent(UUID.self, forKey: .certificateID)
     }
 }
 
@@ -32,16 +38,32 @@ enum AIServer {
     static var chatsDir: String { Paths.support + "/ai-chats" }
 
     /// Arguments for `Server --ai-server`. The API key travels in the environment, not argv.
+    static var tlsBundle: String { Paths.run + "/ai-tls.p12" }
+
     static func arguments(_ s: AIServerSettings, prefix: String) -> [String] {
         var args = ["--ai-server", "--host", s.allowNetwork ? "0.0.0.0" : "127.0.0.1", "--port", String(s.port),
                     "--model", s.modelName, "--afm", afm(prefix: prefix), "--pid-file", pidFile, "--log", logFile,
                     "--chats", chatsDir]
         if !s.webChat { args.append("--no-web") }
+        if s.httpsEnabled { args += ["--https-port", String(s.httpsPort), "--tls-p12", tlsBundle] }
         return args
     }
 
     /// Where the web app is, for opening it from this Mac.
     static func webURL(_ s: AIServerSettings) -> URL? { URL(string: "http://127.0.0.1:\(s.port)/") }
+
+    /// Reads the certificate and key from a PKCS#12 file (kept in memory, never in a keychain).
+    static func loadIdentity(p12 path: String, passphrase: String) -> sec_identity_t? {
+        guard let data = FileManager.default.contents(atPath: path) else { return nil }
+        var options: [String: Any] = [kSecImportExportPassphrase as String: passphrase]
+        if #available(macOS 15.0, *) { options[kSecImportToMemoryOnly as String] = true }
+        var items: CFArray?
+        guard SecPKCS12Import(data as CFData, options as CFDictionary, &items) == errSecSuccess,
+              let entries = items as? [[String: Any]],
+              let identity = entries.first?[kSecImportItemIdentity as String] else { return nil }
+        // swiftlint:disable:next force_cast
+        return sec_identity_create(identity as! SecIdentity)
+    }
 }
 
 // MARK: - Headless server (`Server --ai-server …`)
@@ -58,16 +80,20 @@ final class AIHTTPServer: @unchecked Sendable {
     let webApp: Bool
     let store: ChatStore
     let networkAllowed: Bool
+    let httpsPort: UInt16?
+    let tlsIdentity: sec_identity_t?
     let sessions = SessionStore()
     let limiter = LoginLimiter()
     let authGate = AsyncLimiter(limit: 1)          // password checks run one at a time
     let testAccounts = SystemAccounts.testAccounts()
     private var listener: NWListener?
+    private var tlsListener: NWListener?
     private let queue = DispatchQueue(label: "ai-server", attributes: .concurrent)
     private let generation = AsyncLimiter(limit: 1)       // the on-device model answers one request at a time
 
     init(host: String, port: UInt16, model: String, afmPath: String, apiKey: String, logPath: String,
-         webApp: Bool, chatsPath: String) {
+         webApp: Bool, chatsPath: String, httpsPort: UInt16? = nil, tlsIdentity: sec_identity_t? = nil) {
+        self.httpsPort = httpsPort; self.tlsIdentity = tlsIdentity
         self.host = host; self.port = port; self.model = model; self.afmPath = afmPath; self.apiKey = apiKey; self.logPath = logPath
         self.webApp = webApp
         self.store = ChatStore(root: chatsPath)
@@ -76,6 +102,14 @@ final class AIHTTPServer: @unchecked Sendable {
 
     static func main(_ args: [String]) -> Never {
         func value(_ flag: String) -> String? { args.firstIndex(of: flag).flatMap { args.indices.contains($0 + 1) ? args[$0 + 1] : nil } }
+        var identity: sec_identity_t?
+        var httpsPort: UInt16?
+        if let p = value("--https-port").flatMap({ UInt16($0) }), let bundle = value("--tls-p12") {
+            identity = AIServer.loadIdentity(p12: bundle, passphrase: ProcessInfo.processInfo.environment["SERVER_AI_TLS_PASS"] ?? "")
+            try? FileManager.default.removeItem(atPath: bundle)       // the key is in memory now
+            if identity == nil { FileHandle.standardError.write(Data("Couldn't load the HTTPS certificate.\n".utf8)); exit(1) }
+            httpsPort = p
+        }
         let server = AIHTTPServer(
             host: value("--host") ?? "127.0.0.1",
             port: UInt16(value("--port") ?? "8000") ?? 8000,
@@ -84,7 +118,8 @@ final class AIHTTPServer: @unchecked Sendable {
             apiKey: ProcessInfo.processInfo.environment["SERVER_AI_API_KEY"] ?? "",
             logPath: value("--log") ?? "/dev/null",
             webApp: !args.contains("--no-web"),
-            chatsPath: value("--chats") ?? NSHomeDirectory() + "/Library/Application Support/Server/ai-chats")
+            chatsPath: value("--chats") ?? NSHomeDirectory() + "/Library/Application Support/Server/ai-chats",
+            httpsPort: httpsPort, tlsIdentity: identity)
         let pidFile = value("--pid-file")
         signal(SIGTERM) { _ in exit(0) }
         do {
@@ -99,7 +134,17 @@ final class AIHTTPServer: @unchecked Sendable {
     }
 
     func start() throws {
-        let params = NWParameters.tcp
+        listener = try makeListener(port: port, tls: false)
+        if let httpsPort, let tlsIdentity {
+            let options = NWProtocolTLS.Options()
+            sec_protocol_options_set_local_identity(options.securityProtocolOptions, tlsIdentity)
+            sec_protocol_options_set_min_tls_protocol_version(options.securityProtocolOptions, .TLSv12)
+            tlsListener = try makeListener(port: httpsPort, tls: true, options: options)
+        }
+    }
+
+    private func makeListener(port: UInt16, tls: Bool, options: NWProtocolTLS.Options? = nil) throws -> NWListener {
+        let params = options.map { NWParameters(tls: $0, tcp: NWProtocolTCP.Options()) } ?? NWParameters.tcp
         params.allowLocalEndpointReuse = true
         let listener: NWListener
         if host != "0.0.0.0" {
@@ -109,12 +154,12 @@ final class AIHTTPServer: @unchecked Sendable {
         } else {
             listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
         }
-        listener.newConnectionHandler = { [weak self] conn in self?.accept(conn) }
+        listener.newConnectionHandler = { [weak self] conn in self?.accept(conn, secure: tls) }
         listener.stateUpdateHandler = { state in
             if case .failed(let e) = state { FileHandle.standardError.write(Data("Listener failed: \(e)\n".utf8)); exit(1) }
         }
         listener.start(queue: queue)
-        self.listener = listener
+        return listener
     }
 
     // MARK: HTTP
@@ -124,6 +169,7 @@ final class AIHTTPServer: @unchecked Sendable {
         var path = ""
         var headers: [String: String] = [:]
         var body = Data()
+        var secure = false              // arrived over this server's own HTTPS listener
 
         func cookie(_ name: String) -> String? {
             guard let header = headers["cookie"] else { return nil }
@@ -135,12 +181,12 @@ final class AIHTTPServer: @unchecked Sendable {
         }
     }
 
-    private func accept(_ conn: NWConnection) {
+    private func accept(_ conn: NWConnection, secure: Bool = false) {
         // "Allow other devices" off: this Mac only (the listener is already bound to 127.0.0.1;
         // this is a second line of defence).
         if !networkAllowed && !Self.isLoopback(conn) { conn.cancel(); return }
         conn.start(queue: queue)
-        receive(conn, buffer: Data())
+        receive(conn, buffer: Data(), secure: secure)
     }
 
     static func isLoopback(_ conn: NWConnection) -> Bool {
@@ -177,17 +223,18 @@ final class AIHTTPServer: @unchecked Sendable {
         return text.components(separatedBy: "%")[0]
     }
 
-    private func receive(_ conn: NWConnection, buffer: Data) {
+    private func receive(_ conn: NWConnection, buffer: Data, secure: Bool) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] data, _, done, error in
             guard let self else { return }
             var buffer = buffer
             if let data { buffer.append(data) }
-            if let request = Self.parse(buffer) {
+            if var request = Self.parse(buffer) {
+                request.secure = secure
                 Task { await self.handle(request, conn) }
             } else if done || error != nil || buffer.count > 8 << 20 {
                 conn.cancel()
             } else {
-                self.receive(conn, buffer: buffer)
+                self.receive(conn, buffer: buffer, secure: secure)
             }
         }
     }
@@ -204,7 +251,10 @@ final class AIHTTPServer: @unchecked Sendable {
             guard let colon = line.firstIndex(of: ":") else { continue }
             req.headers[line[..<colon].lowercased()] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
-        let length = Int(req.headers["content-length"] ?? "0") ?? 0
+        // A negative or absurd length is a malformed request, never a reason to crash.
+        guard let length = Int(req.headers["content-length"] ?? "0"), length >= 0, length <= 4 << 20 else {
+            return Request(method: "BAD")
+        }
         let bodyStart = end.upperBound
         guard data.count - bodyStart >= length else { return nil }
         req.body = data[bodyStart..<(bodyStart + length)]

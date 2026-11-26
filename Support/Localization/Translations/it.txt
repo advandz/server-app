@@ -667,3 +667,194 @@
 671|Connesso a internet
 672|Solo rete locale
 673|Nessuna connessione di rete
+674|Cambia password di root
+675|Lettere, numeri e simboli sono tutti accettati.
+676|Reimposta password
+677|Reimposta password…
+678|Reimposta password di root
+679|Password di root
+680|Server conserva la password di root per poter creare database per i tuoi siti web. Reimposta password funziona anche se l’hai dimenticata: MySQL si riavvia brevemente durante l’impostazione.
+681|Imposta una nuova password per l’utente root di MySQL. Server la userà da ora in poi.
+682|La password non può contenere interruzioni di riga.
+683|Usa al massimo 128 caratteri.
+684|Usalo se la password di root è andata persa. MySQL si riavvia brevemente in modalità di recupero, raggiungibile solo da questo Mac, e i siti web che lo usano non sono disponibili per qualche secondo.
+685|Senza password, chiunque usi questo Mac può accedere a MySQL come root.
+686|MySQL è in ascolto solo su questo Mac (127.0.0.1). Ogni sito web ha il proprio utente.
+687|MySQL non ha accettato la password di root salvata da Server. Usa Reimposta password.
+688|MySQL è occupato. Riprova tra un momento.
+689|MySQL non è ancora configurato. Avvialo prima una volta.
+690|MySQL non si è avviato in modalità di recupero.
+691|%lld salvati
+692|1 anno
+693|2 anni
+694|90 giorni
+695|Un certificato salvato
+696|Aggiungi certificato
+697|Aggiungi prima un certificato nella pagina Certificati.
+698|Aggiungi almeno un nome host o un indirizzo.
+699|Automatico (autofirmato da Server)
+700|File del certificato (.pem, .crt)
+701|Certificati
+702|I certificati salvati qui possono essere scelti per qualsiasi sito web (Impostazioni del sito web › SSL) e per FTP.
+703|Catena
+704|Scegli un file di certificato in formato PEM (inizia con BEGIN CERTIFICATE).
+705|Scegli un certificato da usare per questo sito web.
+706|Scegli un file di chiave privata in formato PEM.
+707|Scegli il file della chiave privata.
+708|Impossibile considerare attendibile il certificato: %@
+709|Crea certificato autofirmato
+710|Crea autofirmato…
+711|Elimina certificato
+712|Elimina…
+713|Dettagli
+714|Scaduto
+715|Scade
+716|Scade tra %lld giorni
+717|Per 1 anno
+718|Per 2 anni
+719|Per 90 giorni
+720|Dai un nome al certificato.
+721|Nomi host e indirizzi IP coperti dal certificato, separati da spazi. I caratteri jolly come *.test vanno bene.
+722|Importa
+723|Importa certificato
+724|Importato
+725|Importa…
+726|Emesso da
+727|È usato da %@. Passali prima a un altro certificato.
+728|Conserva i certificati SSL per i tuoi siti web e servizi
+729|File della chiave (.pem, .key)
+730|Il mio certificato di sviluppo
+731|Nomi
+732|Ancora nessun certificato.
+733|Non usato
+734|Qui si possono rinnovare solo i certificati autofirmati.
+735|OpenSSL non è riuscito a leggere il certificato.
+736|OpenSSL non è riuscito a leggere la chiave privata.
+737|Solo file PEM. Lascia vuota la chiave privata se è nel file del certificato. La catena contiene i certificati intermedi, se il tuo provider ti ha dato un file separato.
+738|Chiave privata
+739|Lettura del certificato…
+740|Rinomina certificato
+741|Rinomina…
+742|Rinnova
+743|Autofirmato
+744|Numero di serie
+745|Soggetto
+746|Il certificato e la sua chiave privata vengono eliminati da Server. L’operazione non può essere annullata.
+747|Il certificato scelto per FTP non è stato trovato. Sceglierne un altro in FTP › Impostazioni.
+748|Il certificato ora è considerato attendibile.
+749|Il file della catena non è un file di certificati PEM.
+750|La chiave privata non appartiene a questo certificato.
+751|La chiave privata è protetta da una passphrase. Rimuovila prima, poi importala.
+752|Questo certificato non copre %@. I browser mostreranno un avviso.
+753|Usato da
+754|Usa un certificato dalla pagina Certificati. Riavvia FTP dopo averlo cambiato.
+755|Valido
+756|Valido per
+757|“%@” non è un nome host né un indirizzo valido.
+758|Servi anche l’API e l’app web della chat tramite HTTPS
+759|Impossibile creare il certificato HTTPS: %@
+760|Impossibile preparare il certificato HTTPS: %@
+761|Indirizzo sicuro
+762|Il certificato scelto per HTTPS non è stato trovato. Sceglierne un altro in Modelli IA › Impostazioni.
+763|Usa un certificato dalla pagina Certificati.
+764|Usa un certificato autofirmato per i nomi di questo Mac. I browser mostrano un avviso finché non lo consideri attendibile in Certificati, oppure scegli un certificato tuo.
+765|%lld, %lld (STARTTLS), %lld (TLS)
+766|La 143 parte in chiaro e passa alla cifratura (STARTTLS). La 993 è cifrata fin dall’inizio (TLS).
+767|La 25 riceve posta da altri server. La 587 (STARTTLS) e la 465 (TLS) sono per le app di posta, che devono accedere.
+768|Account
+769|Aggiungi account
+770|Aggiungi account…
+771|Aggiungi alias
+772|Aggiungi alias…
+773|Aggiungi dominio
+774|Aggiungi prima il dominio.
+775|Alias
+776|Un alias inoltra la posta ad altri indirizzi. Usa @example.com per raccogliere tutto ciò che viene inviato a un dominio.
+777|Impossibile creare il certificato di posta: %@
+778|Impossibile installare Mailpit con Homebrew. Vedi Log › Attività di Homebrew.
+779|Impossibile proteggere la password.
+780|Impossibile avviare Mailpit: %@
+781|Domini
+782|Ogni account è una casella che accede con il proprio indirizzo completo.
+783|Inserisci un nome di dominio come example.com.
+784|Inserisci un indirizzo come info@example.com, o @example.com per tutto.
+785|Inserisci uno o più indirizzi di destinazione.
+786|Per i test: raccoglie tutta la posta inviata dalle tue app invece di consegnarla.
+787|IMAPS
+788|Posta in arrivo
+789|Porta della posta in arrivo
+790|Vengono rimossi anche i suoi account e alias. I messaggi restano sul disco.
+791|Posta
+792|Cartella della posta
+793|La posta di questi domini è conservata su questo Mac. Fai puntare il record MX di ogni dominio a questo Mac per ricevere posta da internet.
+794|Posta richiede la password di un amministratore per avviarsi.
+795|Posta richiede la password di un amministratore per arrestarsi.
+796|Caselle
+797|Mailpit risponde sulla porta SMTP al posto del vero server di posta. I messaggi vengono raccolti e mai consegnati. Invio e SMTPS sono chiusi finché la sandbox è attiva.
+798|Mailpit raccoglie ogni messaggio inviato alla porta SMTP e lo conserva perché tu possa leggerlo. Non viene consegnato nulla. Accetta qualsiasi accesso ed è raggiungibile da altri dispositivi della rete.
+799|Molti provider internet bloccano la porta 25. Un relay invia la posta in uscita tramite un altro server SMTP. Lascia vuoto per consegnare direttamente.
+800|Dimensione massima dei messaggi
+801|Ancora nessun account.
+802|Ancora nessun alias.
+803|Ancora nessun dominio.
+804|Solo questo Mac può connettersi. Attiva l’accesso di rete in SMTP per usarlo da altri dispositivi.
+805|Altri dispositivi della tua rete possono connettersi. L’accesso è cifrato a meno che tu non lo disattivi in IMAP.
+806|Le password sono accettate solo su una connessione cifrata.
+807|Le password possono essere inviate non cifrate. Usalo solo su una rete di cui ti fidi.
+808|Postfix (integrato in macOS)
+809|Relay
+810|Host del relay
+811|Rimuovi account
+812|Rimuovi alias
+813|Rimuovi ed elimina la posta
+814|Rimuovere “%@”?
+815|Sostituisci il vero server SMTP con Mailpit sulla stessa porta
+816|Richiedi la cifratura per accedere
+817|Riavvia Posta per applicare le modifiche.
+818|Server di posta SMTP e IMAP
+819|Sandbox
+820|Invio
+821|Questo alias esiste già.
+822|Questo dominio è già stato aggiunto.
+823|Questa casella esiste già.
+824|L’indirizzo completo, come tu@example.com
+825|Il server di posta non si è avviato.
+826|Il server di posta non si è avviato:
+827|La casella smette di funzionare. I suoi messaggi restano sul disco a meno che tu non li elimini.
+828|La password non può contenere due punti o interruzioni di riga.
+829|Usa almeno 8 caratteri.
+830|Usa lettere, numeri e . _ - + per il nome.
+831|Annota ora la password. Server ne conserva solo una copia rimescolata.
+832|%lld (STARTTLS), %lld (TLS)
+833|Mailpit non si è avviato.
+834|Cache degli oggetti
+835|Cache in memoria Memcached
+836|Riavvia la cache degli oggetti per applicare le modifiche.
+837|Memcached %@
+838|%@ usati su %@
+839|Elementi
+840|%@ memorizzati · %@ rimossi
+841|%lld connessi · %@ dall’avvio
+842|%@ letture · %@ scritture
+843|Percentuale di successo
+844|%lld%%
+845|Tutto ciò che è nella cache va perso quando si ferma.
+846|Svuota cache…
+847|Svuota cache
+848|Ogni elemento in cache viene rimosso. I siti web la riempiono di nuovo mentre funzionano.
+849|Massimo
+850|Thread
+851|Il registro è in Registri › Cache degli oggetti.
+852|Errori e avvisi
+853|Ogni comando
+854|Svuotare la cache degli oggetti?
+855|La cache è stata svuotata.
+856|Impossibile svuotare la cache.
+857|Memcached non ha una password e le sue connessioni non sono cifrate. Usa l’accesso di rete solo su una rete attendibile.
+858|Impossibile avviare la cache degli oggetti: %@
+859|La cache degli oggetti non si è avviata.
+860|Disattiva questa rete
+861|Attiva questa rete
+862|Impossibile modificare %@: %@
+863|%@ è attivata.
+864|%@ è disattivata.

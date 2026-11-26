@@ -29,15 +29,30 @@ struct ConfigGenerator {
 
     static func certificatePaths(_ site: Website) -> (cert: String, key: String) {
         if site.ssl.mode == .custom { return (site.ssl.certificatePath, site.ssl.keyPath) }
+        if site.ssl.mode == .stored, let id = site.ssl.certificateID {
+            let dir = Paths.ssl + "/store/" + id.uuidString
+            return (dir + "/cert.pem", dir + "/key.pem")
+        }
         let dir = Paths.ssl + "/" + site.id.uuidString
         return (dir + "/cert.pem", dir + "/key.pem")
     }
 
-    private func q(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
+    private func q(_ s: String) -> String {
+        let flat = s.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ")
+        return "\"" + flat.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+    }
+    /// Free text shown in a config comment, kept on one line.
+    private func oneLine(_ s: String) -> String { s.components(separatedBy: .newlines).joined(separator: " ") }
     private func indent(_ block: String, _ n: Int = 4) -> String {
         let pad = String(repeating: " ", count: n)
         return block.split(separator: "\n", omittingEmptySubsequences: false)
             .map { $0.isEmpty ? "" : pad + $0 }.joined(separator: "\n")
+    }
+    /// Nginx `listen` lines: every address, or just this Mac when other devices aren't allowed.
+    private func listen(_ port: Int, _ flags: String = "") -> String {
+        let tail = flags.isEmpty ? "" : " " + flags
+        if config.webAllowNetwork { return "listen \(port)\(tail);\n" }
+        return "listen 127.0.0.1:\(port)\(tail);\nlisten [::1]:\(port)\(tail);\n"
     }
     private func trimmed(_ s: String) -> String { s.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -103,7 +118,9 @@ struct ConfigGenerator {
 
         """
         if !trimmed(a.serverAdmin).isEmpty { out += "ServerAdmin \(trimmed(a.serverAdmin))\n" }
-        out += ports.map { "Listen \($0)" }.joined(separator: "\n") + "\n\n"
+        out += ports.map { port in
+            config.webAllowNetwork ? "Listen \(port)" : "Listen 127.0.0.1:\(port)\nListen [::1]:\(port)"
+        }.joined(separator: "\n") + "\n\n"
         out += modules.map { "LoadModule \($0.name) \(q(httpdModulesDir + "/" + $0.file))" }.joined(separator: "\n")
         out += """
 
@@ -145,7 +162,7 @@ struct ConfigGenerator {
         if !trimmed(a.customConfig).isEmpty { out += "# Custom configuration\n\(a.customConfig)\n\n" }
 
         for site in sites {
-            out += "# ── \(site.name) (\(site.hostname))\n"
+            out += "# ── \(oneLine(site.name)) (\(site.hostname))\n"
             let httpPort = config.httpPort(site)
             if site.ssl.enabled && site.ssl.redirectHTTP {
                 let sp = config.httpsPort(site)
@@ -255,16 +272,16 @@ struct ConfigGenerator {
         if !trimmed(n.customConfig).isEmpty { out += "\n    # Custom configuration\n" + indent(n.customConfig) + "\n" }
 
         // Default server: answers unknown host names on the default port.
-        var def = "listen \(n.httpPort) default_server;\nserver_name _;\nroot \(q(Self.defaultDocRoot));\nindex index.html;\n"
+        var def = listen(n.httpPort, "default_server") + "server_name _;\nroot \(q(Self.defaultDocRoot));\nindex index.html;\n"
         if n.stubStatus { def += "location = /nginx_status {\n    stub_status;\n    allow 127.0.0.1;\n    deny all;\n}\n" }
         out += "\n    server {\n" + indent(def, 8) + "    }\n"
 
         for site in config.sites(for: .nginx) {
-            out += "\n    # ── \(site.name) (\(site.hostname))\n"
+            out += "\n    # ── \(oneLine(site.name)) (\(site.hostname))\n"
             let httpPort = config.httpPort(site)
             if site.ssl.enabled && site.ssl.redirectHTTP {
                 let sp = config.httpsPort(site)
-                let block = "listen \(httpPort);\nserver_name \(site.allHostnames.joined(separator: " "));\nreturn 301 https://$host\(sp == 443 ? "" : ":\(sp)")$request_uri;\n"
+                let block = listen(httpPort) + "server_name \(site.allHostnames.joined(separator: " "));\nreturn 301 https://$host\(sp == 443 ? "" : ":\(sp)")$request_uri;\n"
                 out += "    server {\n" + indent(block, 8) + "    }\n"
             } else {
                 out += "    server {\n" + indent(nginxServer(site, port: httpPort, ssl: false), 8) + "    }\n"
@@ -280,7 +297,7 @@ struct ConfigGenerator {
     private func nginxServer(_ site: Website, port: Int, ssl: Bool) -> String {
         let o = site.nginx
         let logBase = Paths.siteLogs + "/" + site.slug + "-nginx" + (ssl ? "-ssl" : "")
-        var s = "listen \(port)\(ssl ? " ssl" : "");\n"
+        var s = listen(port, ssl ? "ssl" : "")
         if ssl && config.nginx.http2 { s += "http2 on;\n" }
         s += "server_name \(site.allHostnames.joined(separator: " "));\n"
         s += "root \(q(site.documentRoot));\n"

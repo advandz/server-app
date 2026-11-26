@@ -25,7 +25,29 @@ enum Paths {
     static var ssl: String { support + "/ssl" }
     static var work: String { support + "/work" }        // cwd for brew, scratch files
 
-    static let run = ProcessInfo.processInfo.environment["SERVER_APP_RUN"] ?? "/tmp/serverapp-\(getuid())"
+    static let run: String = {
+        if let override = ProcessInfo.processInfo.environment["SERVER_APP_RUN"] { return override }
+        return privateRunDirectory()
+    }()
+
+    /// `/tmp/serverapp-<uid>`, but only if it's really ours: a real folder owned by this user,
+    /// not a link someone else planted. Otherwise a fresh private folder in the per-user temp area.
+    /// The folder is always locked to the owner (0700), since it holds pid files and sockets.
+    private static func privateRunDirectory() -> String {
+        func isOurs(_ path: String) -> Bool {
+            var st = stat()
+            return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR && st.st_uid == getuid()
+        }
+        func exists(_ path: String) -> Bool { var st = stat(); return lstat(path, &st) == 0 }
+        var path = "/tmp/serverapp-\(getuid())"
+        if exists(path) && !isOurs(path) {
+            path = (NSTemporaryDirectory() as NSString).appendingPathComponent("serverapp").replacingOccurrences(of: "//", with: "/")
+            if exists(path) && !isOurs(path) { path += "-\(getpid())" }
+        }
+        try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        if isOurs(path) { chmod(path, 0o700) }
+        return path
+    }
 
     static func mysqlDataDir(_ formula: String) -> String {
         data + "/" + formula.replacingOccurrences(of: "@", with: "-")

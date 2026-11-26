@@ -18,6 +18,23 @@ enum SelfTest {
         check(brewOK, "Homebrew present")
         await app.brew.refreshInstalledForTest()
 
+        // Settings safety: one broken entry doesn't empty the list, and the file is private.
+        let good = #"{"id":"11111111-1111-1111-1111-111111111111","name":"ok","hostname":"ok.localhost","documentRoot":"/tmp/x"}"#
+        let mixed = #"{"websites":[\#(good),{"name":5}]}"#
+        let decoded = try? JSONDecoder().decode(AppConfig.self, from: Data(mixed.utf8))
+        check(decoded?.websites.count == 1, "A broken website entry is skipped, the others are kept")
+        app.update { $0.ftp.port = $0.ftp.port }
+        let mode = (try? FileManager.default.attributesOfItem(atPath: Paths.configFile)[.posixPermissions] as? Int) ?? 0
+        check(mode == 0o600, "The settings file is readable only by you")
+        var local = AppConfig(); local.webAllowNetwork = false
+        local.websites = [Website(name: "x", hostname: "x.localhost", documentRoot: "/tmp/x")]
+        let gen = ConfigGenerator(config: local, prefix: "/opt/homebrew")
+        check(gen.apacheConfig().contains("Listen 127.0.0.1:80") && !gen.apacheConfig().contains("\nListen 80\n"), "Apache can listen on this Mac only")
+        check(gen.nginxConfig().contains("listen 127.0.0.1:8080 default_server;"), "Nginx can listen on this Mac only")
+        check(FTPServer.arguments(FTPSettings()).contains("127.0.0.1,21"), "FTP is limited to this Mac by default")
+        if ProcessInfo.processInfo.environment["SELFTEST_MAIL"] == "only" { return await runMail(app, check: check) }
+        if ProcessInfo.processInfo.environment["SELFTEST_CACHE"] == "only" { return await runCache(app, check: check) }
+
         let root = Paths.support + "/sites"
         let a = root + "/alpha", n = root + "/beta", g = root + "/gamma", dl = root + "/delta"
         let nodeApp = "require('http').createServer((q, r) => r.end('node:' + process.version + ':' + (q.headers['x-forwarded-proto'] || '-'))).listen(process.env.PORT, '127.0.0.1');"
@@ -65,6 +82,45 @@ enum SelfTest {
         check(app.isRunning(.apache), "Apache running \(app.errors[.apache] ?? "")")
         check(await curl("http://127.0.0.1:18080/", host: "alpha.localhost").hasPrefix("alpha:"), "Apache serves PHP over HTTP")
         check(await curl("https://127.0.0.1:18443/", host: "alpha.localhost").contains(":on"), "Apache serves PHP over HTTPS")
+
+        // Certificates: create, import, check, use for a website, delete.
+        print("Certificates")
+        let created = await app.createSelfSignedCertificate(name: "Test cert", names: "alpha.localhost *.test 127.0.0.1", days: 90)
+        check(created == nil, "Self-signed certificate created \(created ?? "")")
+        if let cert = app.config.certificates.first {
+            let info = app.certificateInfo[cert.id]
+            check(info?.names == ["alpha.localhost", "*.test", "127.0.0.1"], "Names are read back (\(info?.names.joined(separator: ", ") ?? "none"))")
+            check(info?.covers("shop.test") == true && info?.covers("a.b.test") == false && info?.covers("other.localhost") == false, "Wildcard names cover one label only")
+            check((info?.daysLeft ?? 0) >= 88 && info?.isSelfIssued == true && !(info?.fingerprint.isEmpty ?? true), "Validity, issuer and fingerprint are read")
+            let files = app.certificateFiles(cert.id)
+            let imported = await app.importCertificate(name: "Imported", certificatePath: files.cert, keyPath: files.key, chainPath: "")
+            check(imported == nil && app.config.certificates.count == 2, "A certificate and key can be imported \(imported ?? "")")
+            let other = await app.createSelfSignedCertificate(name: "Other", names: "other.test", days: 90)
+            let otherFiles = other == nil ? app.certificateFiles(app.config.certificates.last!.id) : files
+            let mismatch = await app.importCertificate(name: "Bad", certificatePath: files.cert, keyPath: otherFiles.key, chainPath: "")
+            check(mismatch != nil && app.config.certificates.count == 3, "A key that doesn't match the certificate is refused")
+            let bad = await app.createSelfSignedCertificate(name: "x", names: "not valid!", days: 90)
+            check(bad != nil, "Invalid names are refused")
+            // Serve alpha over HTTPS with the stored certificate.
+            let siteID = app.config.websites[0].id
+            app.update { c in c.websites[0].ssl.mode = .stored; c.websites[0].ssl.certificateID = cert.id }
+            check(app.certificateUsers(cert.id) == [app.config.websites[0].name], "The certificate shows which website uses it")
+            check(app.deleteCertificate(cert.id) != nil, "A certificate in use can't be deleted")
+            app.applyTask?.cancel()
+            await app.applyConfiguration()
+            try? await Task.sleep(for: .seconds(2))
+            let served = await Shell.run("/usr/bin/curl", ["-sk", "-m", "8", "--resolve", "alpha.localhost:18443:127.0.0.1", "-w", "%{ssl_verify_result}", "-o", "/dev/null", "https://alpha.localhost:18443/"])
+            check(served.ok, "Apache serves HTTPS with the stored certificate (\(served.output))")
+            let presented = await Shell.run("/bin/sh", ["-c", "echo | /usr/bin/openssl s_client -connect 127.0.0.1:18443 -servername alpha.localhost 2>/dev/null | /usr/bin/openssl x509 -noout -fingerprint -sha256"])
+            check(presented.output.contains(info?.fingerprint ?? "?"), "…and it presents that exact certificate")
+            app.update { c in c.websites[0].ssl.mode = .selfSigned; c.websites[0].ssl.certificateID = nil }
+            _ = siteID
+            check(app.deleteCertificate(cert.id) == nil && !FileManager.default.fileExists(atPath: files.cert), "Deleting removes the files")
+            for c in app.config.certificates { _ = app.deleteCertificate(c.id) }
+            check(app.config.certificates.isEmpty, "All stored certificates removed")
+            app.applyTask?.cancel()
+            await app.applyConfiguration()
+        }
 
         print("Nginx")
         await app.start(.nginx)
@@ -114,6 +170,37 @@ enum SelfTest {
             let d = await app.dropDatabase(rec)
             check(d == nil, "Database dropped")
         }
+
+        // Root password: change it, reset it without knowing the old one, and remove it.
+        func rootLogin(_ password: String) async -> Bool {
+            let login = app.mysqlLogin(password: password)
+            defer { login.cleanup() }
+            let r = await Shell.run(app.generator.mysqlBin("mysql"), login.args + ["--socket=\(Paths.mysqlSocket)", "-uroot", "-N", "-B"], input: "SELECT 1")
+            return r.ok
+        }
+        check(await rootLogin(""), "Root starts without a password")
+        let changed = await app.changeMySQLRootPassword(to: "first pass'w\\ord")
+        check(changed == nil, "Root password changed \(changed ?? "")")
+        check(!(await rootLogin("")), "Root can't log in without the password any more")
+        check(await rootLogin("first pass'w\\ord"), "Root logs in with the new password (quotes and backslashes kept)")
+        check(app.mysqlRootPassword == "first pass'w\\ord", "Server saved the new password")
+        let withPassword = await app.createDatabase(name: "beta_db", for: nil)
+        check(withPassword == nil, "Server still creates databases with a root password \(withPassword ?? "")")
+        if let rec = app.config.databases.first(where: { $0.name == "beta_db" }) { _ = await app.dropDatabase(rec) }
+        // Lose the saved password, then recover with a reset.
+        let formula = app.config.mysql.formula
+        app.update { $0.mysqlRootPasswords[formula] = "wrong" }
+        let denied = await app.changeMySQLRootPassword(to: "x")
+        check(denied?.contains("Reset Password") == true, "A lost password is reported with a hint to reset")
+        let reset = await app.resetMySQLRootPassword(to: "second-pass")
+        check(reset == nil, "Root password reset without the old one \(reset ?? "")")
+        check(app.isRunning(.mysql), "MySQL is running again after the reset")
+        let newWorks = await rootLogin("second-pass"), oldWorks = await rootLogin("first pass'w\\ord")
+        check(newWorks && !oldWorks, "Only the new password works after the reset")
+        check(!FileManager.default.fileExists(atPath: Paths.run + "/mysql-login-"), "No password files are left behind")
+        let removed = await app.changeMySQLRootPassword(to: "")
+        let openAgain = await rootLogin("")
+        check(removed == nil && app.mysqlRootPassword.isEmpty && openAgain, "Password removed")
 
         print("DNS (dnsmasq)")
         app.update { c in
@@ -266,6 +353,42 @@ enum SelfTest {
         check(await http("/v1/models", headers: ["Authorization: Bearer sk-selftest"]).code == "200", "The key works")
         check(await http("/api/chats", jar: aliceJar).code == "401", "Restarting signs everyone out")
         _ = await http("/api/chats/\(chatID)", jar: aliceJar, method: "DELETE")
+
+        // HTTPS: the chat and API also answer over TLS, with a generated or a stored certificate.
+        print("AI HTTPS")
+        app.update { c in c.ai.httpsEnabled = true; c.ai.httpsPort = 19443; c.ai.certificateID = nil }
+        await app.restart(.ai)
+        check(app.isRunning(.ai), "AI server running with HTTPS \(app.errors[.ai] ?? "")")
+        let secure = "https://127.0.0.1:19443"
+        let tlsPage = await Shell.run("/usr/bin/curl", ["-sk", "-m", "20", "-o", "/dev/null", "-w", "%{http_code}", secure + "/"])
+        check(tlsPage.output == "200", "The chat loads over HTTPS (\(tlsPage.output))")
+        let strict = await Shell.run("/usr/bin/curl", ["-s", "-m", "20", "-o", "/dev/null", "-w", "%{http_code}", secure + "/"])
+        check(!strict.ok, "A browser that doesn't trust the generated certificate would warn about it")
+        let tlsLogin = await Shell.run("/usr/bin/curl", ["-sk", "-m", "30", "-D", "-", "-o", "/dev/null", "-c", aliceJar, "-X", "POST", "-H", "Content-Type: application/json",
+                                                         "-d", #"{"username":"alice","password":"alice-pass-1"}"#, secure + "/api/login"])
+        check(tlsLogin.output.contains("200") && tlsLogin.output.contains("Secure"), "Signing in over HTTPS sets a Secure cookie")
+        let tlsMe = await Shell.run("/usr/bin/curl", ["-sk", "-m", "20", "-b", aliceJar, secure + "/api/me"])
+        check(tlsMe.output.contains("alice"), "The session works over HTTPS")
+        let tlsAPI = await Shell.run("/usr/bin/curl", ["-sk", "-m", "20", "-H", "Authorization: Bearer sk-selftest", "-o", "/dev/null", "-w", "%{http_code}", secure + "/v1/models"])
+        check(tlsAPI.output == "200", "The API answers over HTTPS with its key")
+        check(await http("/").code == "200", "Plain HTTP still works")
+        // A stored certificate that this client can verify.
+        let certErr = await app.createSelfSignedCertificate(name: "AI cert", names: "localhost 127.0.0.1", days: 30)
+        check(certErr == nil, "Certificate for the chat created \(certErr ?? "")")
+        if let cert = app.config.certificates.last {
+            app.update { $0.ai.certificateID = cert.id }
+            await app.restart(.ai)
+            let files = app.certificateFiles(cert.id)
+            let verified = await Shell.run("/usr/bin/curl", ["-s", "-m", "20", "--cacert", files.cert, "-o", "/dev/null", "-w", "%{http_code}", "https://localhost:19443/"])
+            check(verified.output == "200", "A stored certificate is presented and verifies (\(verified.output))")
+            check(app.deleteCertificate(cert.id) != nil, "It can't be deleted while the chat uses it")
+            app.update { $0.ai.certificateID = nil; $0.ai.httpsEnabled = false }
+            await app.restart(.ai)
+            check(!FileManager.default.fileExists(atPath: AIServer.tlsBundle), "No key bundle is left on disk")
+            let gone = await Shell.run("/usr/bin/curl", ["-sk", "-m", "5", "-o", "/dev/null", secure + "/"])
+            check(!gone.ok, "HTTPS is off again")
+            _ = app.deleteCertificate(cert.id)
+        }
         // Real Cloudflare quick tunnels (public for a few seconds): only when asked for.
         if ProcessInfo.processInfo.environment["SELFTEST_CLOUDFLARE"] == "1" {
             print("Cloudflare quick tunnels (public, short-lived)")
@@ -356,6 +479,149 @@ enum SelfTest {
         check(app.config.websites.filter(\.isNode).allSatisfy { !app.isNodeAppRunning($0) }, "Node apps stopped")
         print(ok ? "SELF-TEST PASSED" : "SELF-TEST FAILED")
         return ok
+    }
+
+
+    /// Mail end to end: Postfix and Dovecot (two administrator prompts), then the Mailpit sandbox.
+    private static func runMail(_ app: AppState, check: (Bool, String) -> Void) async -> Bool {
+        var failed = false
+        func check(_ cond: Bool, _ msg: String) { if !cond { failed = true }; print(cond ? "  ✓ \(msg)" : "  ✗ \(msg)") }
+        func py(_ code: String) async -> String {
+            let r = await Shell.run("/usr/bin/python3", ["-c", code])
+            print("    py → \(r.output.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300))")
+            return r.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        func send(_ port: Int, to: String, subject: String, login: (String, String)? = nil, tls: Bool = false) async -> String {
+            let auth = login.map { "s.login('\($0.0)', '\($0.1)')" } ?? "pass"
+            let starttls = tls ? "import ssl; c=ssl.create_default_context(); c.check_hostname=False; c.verify_mode=ssl.CERT_NONE; s.starttls(context=c)" : "pass"
+            return await py("""
+            import smtplib
+            from email.message import EmailMessage
+            m = EmailMessage(); m['From'] = 'sender@example.org'; m['To'] = '\(to)'; m['Subject'] = '\(subject)'; m.set_content('body')
+            try:
+                s = smtplib.SMTP('127.0.0.1', \(port), timeout=15)
+                \(starttls)
+                \(auth)
+                s.send_message(m); s.quit(); print('sent')
+            except Exception as e:
+                print('error', e)
+            """)
+        }
+        func imapCount(_ port: Int, user: String, password: String) async -> String {
+            await py("""
+            import imaplib
+            try:
+                m = imaplib.IMAP4('127.0.0.1', \(port)); m.login('\(user)', '\(password)')
+                t, d = m.select('INBOX'); t2, ids = m.search(None, 'ALL'); print('count', len(ids[0].split()))
+                subs = []
+                for i in ids[0].split():
+                    t3, data = m.fetch(i, '(BODY[HEADER.FIELDS (SUBJECT)])'); subs.append(data[0][1].decode().strip())
+                print(subs); m.logout()
+            except Exception as e:
+                print('error', e)
+            """)
+        }
+        func waitFor(_ what: String, seconds: Double = 25, _ cond: () async -> Bool) async -> Bool {
+            let end = Date().addingTimeInterval(seconds)
+            while Date() < end { if await cond() { return true }; try? await Task.sleep(for: .milliseconds(500)) }
+            return false
+        }
+
+        print("Mail (Postfix + Dovecot, asks for an administrator password)")
+        app.update { c in
+            c.mail.hostName = "mail.test.dev"; c.mail.smtpPort = 2525; c.mail.submissionPort = 2587; c.mail.smtpsPort = 2465
+            c.mail.imapPort = 2143; c.mail.imapsPort = 2993; c.mail.sandbox = false; c.mail.requireEncryption = false
+            c.mail.sandboxWebPort = 18025
+        }
+        check(await app.addMailDomain("test.dev") == nil, "Domain added")
+        check(await app.addMailAccount(user: "bob", domain: "test.dev", password: "bob-secret-1") == nil, "Account added")
+        check(await app.addMailAlias(source: "info@test.dev", destination: "bob@test.dev") == nil, "Alias added")
+        check(await app.addMailAlias(source: "@test.dev", destination: "bob@test.dev") == nil, "Catch-all added")
+        await app.start(.mail)
+        check(app.isRunning(.mail), "Mail running \(app.errors[.mail] ?? "")")
+        check(app.mailPostfixRunning, "Postfix running")
+        let imapUp = await waitFor("imap") { await py("import socket; s=socket.create_connection(('127.0.0.1',2143),3); print(s.recv(100).decode()[:20])").hasPrefix("* OK") }
+        check(imapUp, "IMAP answers on its port")
+        let smtpUp = await waitFor("smtp") { await py("import socket; s=socket.create_connection(('127.0.0.1',2525),3); print(s.recv(100).decode()[:20])").hasPrefix("220") }
+        check(smtpUp, "SMTP answers on its port")
+
+        check(await send(2525, to: "bob@test.dev", subject: "direct") == "sent", "SMTP accepts mail for a mailbox")
+        check(await send(2525, to: "info@test.dev", subject: "via-alias") == "sent", "SMTP accepts mail for an alias")
+        check(await send(2525, to: "nobody@test.dev", subject: "via-catchall") == "sent", "SMTP accepts mail for the catch-all")
+        let arrived = await waitFor("delivery") { await imapCount(2143, user: "bob@test.dev", password: "bob-secret-1").contains("via-catchall") }
+        let box = await imapCount(2143, user: "bob@test.dev", password: "bob-secret-1")
+        check(arrived, "IMAP shows the delivered messages")
+        check(box.contains("direct") && box.contains("via-alias") && box.contains("via-catchall"), "Mailbox holds direct, alias and catch-all mail")
+        check((await imapCount(2143, user: "bob@test.dev", password: "wrong")).hasPrefix("error"), "IMAP refuses a wrong password")
+        let sub = await send(2587, to: "bob@test.dev", subject: "submitted", login: ("bob@test.dev", "bob-secret-1"), tls: true)
+        check(sub == "sent", "Submission accepts an authenticated, encrypted client (\(sub.prefix(80)))")
+        let subBad = await send(2587, to: "bob@test.dev", subject: "bad", login: ("bob@test.dev", "nope"), tls: true)
+        check(subBad.hasPrefix("error"), "Submission refuses a wrong password")
+        let subOpen = await send(2587, to: "bob@test.dev", subject: "plain")
+        check(subOpen.hasPrefix("error"), "Submission refuses a client that doesn't sign in")
+        check(await app.changeMailPassword(app.config.mailAccounts[0].id, to: "bob-secret-2") == nil, "Password changed")
+        let changed = await imapCount(2143, user: "bob@test.dev", password: "bob-secret-2")
+        check(changed.contains("count"), "New password works without a restart (\(changed.prefix(40)))")
+        check((await imapCount(2143, user: "bob@test.dev", password: "bob-secret-1")).hasPrefix("error"), "Old password stops working")
+        await app.stop(.mail)
+        check(!app.isRunning(.mail) && !app.mailPostfixRunning, "Mail stopped \(app.errors[.mail] ?? "")")
+
+        print("Mail sandbox (Mailpit)")
+        app.update { $0.mail.sandbox = true }
+        await app.start(.mail)
+        check(app.mailSandboxRunning && app.isRunning(.mail), "Sandbox running \(app.errors[.mail] ?? "")")
+        check(!app.mailPostfixRunning, "Postfix stays off in sandbox mode")
+        check(await send(2525, to: "anyone@anywhere.example", subject: "caught") == "sent", "Sandbox accepts mail for any address on the SMTP port")
+        check(await send(2525, to: "x@y.example", subject: "caught2", login: ("any", "thing")) == "sent", "Sandbox accepts any sign-in")
+        let inbox = await py("import urllib.request, json; d = json.load(urllib.request.urlopen('http://127.0.0.1:18025/api/v1/messages')); print(d['total'], sorted(m['Subject'] for m in d['messages']))")
+        check(inbox.hasPrefix("2") && inbox.contains("caught"), "Mailpit's inbox holds the messages")
+        check((await imapCount(2143, user: "bob@test.dev", password: "bob-secret-2")).contains("count"), "IMAP still works in sandbox mode")
+        await app.stop(.mail)
+        check(!app.isRunning(.mail) && !app.mailSandboxRunning, "Sandbox stopped \(app.errors[.mail] ?? "")")
+        print(failed ? "MAIL TEST FAILED" : "MAIL TEST PASSED")
+        return !failed
+    }
+
+    /// Object cache (memcached): start, store and read back, statistics, flush, restart, stop.
+    private static func runCache(_ app: AppState, check: (Bool, String) -> Void) async -> Bool {
+        var failed = false
+        func check(_ cond: Bool, _ msg: String) { if !cond { failed = true }; print(cond ? "  ✓ \(msg)" : "  ✗ \(msg)") }
+        print("Object Caching (memcached)")
+        app.update { $0.memcached.port = 21211; $0.memcached.memoryMB = 64; $0.memcached.logLevel = 2 }
+        await app.start(.memcached)
+        check(app.isRunning(.memcached), "Object cache running \(app.errors[.memcached] ?? "")")
+        let port = 21211
+        let set = await MemcachedServer.talk("set greeting 0 0 5\r\nhello", port: port) ?? ""
+        check(set.contains("STORED"), "A value is stored")
+        let get = await MemcachedServer.talk("get greeting", port: port) ?? ""
+        check(get.contains("VALUE greeting 0 5") && get.contains("hello"), "…and read back")
+        let st = await MemcachedServer.stats(port: port)
+        check(st?.items == 1 && st?.limit == 64 * 1_048_576 && st?.hits == 1, "Statistics are read (\(st?.version ?? "?"), \(st?.items ?? -1) item, limit \(st?.limit ?? -1))")
+        let lan = await Task.detached { NetworkScanner.primaryIPv4() }.value
+        if let lan {
+            let outside = await Shell.run("/usr/bin/nc", ["-z", "-w", "2", lan, String(port)])
+            check(!outside.ok, "Not reachable from the network by default")
+        }
+        check(await MemcachedServer.flush(port: port), "Flush succeeds")
+        let after = await MemcachedServer.talk("get greeting", port: port) ?? ""
+        check(!after.contains("hello"), "The flushed value is gone")
+        check((try? String(contentsOfFile: MemcachedServer.logFile, encoding: .utf8))?.isEmpty == false, "The log records commands")
+        let clash = await Shell.run("/bin/sh", ["-c", "echo | /usr/bin/nc -w1 127.0.0.1 \(port) >/dev/null && echo up"])
+        check(clash.output.contains("up"), "Port answers")
+        app.update { $0.memcached.port = 21212; $0.memcached.allowNetwork = true }
+        await app.restart(.memcached)
+        let restarted = await MemcachedServer.stats(port: 21212)
+        check(app.isRunning(.memcached) && restarted != nil, "Restart applies the new port \(app.errors[.memcached] ?? "")")
+        if let lan {
+            let outside = await Shell.run("/usr/bin/nc", ["-z", "-w", "2", lan, "21212"])
+            check(outside.ok, "Reachable from the network when allowed")
+        }
+        await app.stop(.memcached)
+        check(!app.isRunning(.memcached), "Object cache stopped")
+        let leftover = await MemcachedServer.stats(port: 21212)
+        check(leftover == nil, "Nothing listens after stopping")
+        print(failed ? "CACHE TEST FAILED" : "CACHE TEST PASSED")
+        return !failed
     }
 
     private static func curl(_ url: String, host: String, statusOnly: Bool = false) async -> String {

@@ -16,10 +16,12 @@
 ## Features
 
 - **Websites** on Apache or Nginx, with PHP (5.6 to the latest 8.x) or Node.js, SSL and MySQL databases
-- **Services**: Apache, Nginx, MySQL, Redis, FTP, DNS, SSH, File Sharing, Screen Sharing and Content Caching
+- **Services**: Apache, Nginx, MySQL, Redis, Object Caching (Memcached), FTP, DNS, Mail, SSH, File Sharing, Screen Sharing and Content Caching
+- **Certificates**: trusted local HTTPS for your sites, and for the AI server and chat
+- **Mail**: SMTP and IMAP with domains, accounts and aliases, plus a Sandbox that catches test mail
 - **AI Models**: an OpenAI-compatible server and chat web app using Apple's on-device model
 - **Cloudflare** quick tunnels to share a website or the chat on the internet
-- Network, Firewall, Hosts, Storage and central Logs
+- Network, Firewall, Hosts, Storage and central Logs, with options to keep FTP and the web servers to this Mac only
 - Installs and updates Homebrew and the formulae it uses on its own
 - **Automatic updates** from this repository's releases
 - In English, Spanish, French, German, Italian, Portuguese (Brazil), Japanese, Korean and Chinese (Simplified), following your Mac's language
@@ -71,8 +73,8 @@ If the app isn't in **Applications**, use its actual path. Only do this for a co
 3. Tag and publish, attaching the DMG:
 
    ```bash
-   git tag v1.0.1 && git push origin v1.0.1
-   gh release create v1.0.1 build/Server-1.0.1.dmg --title "Server 1.0.1"
+   git tag v1.1.0 && git push origin v1.1.0
+   gh release create v1.1.0 build/Server-1.1.0.dmg --title "Server 1.1.0"
    ```
 
 The app finds the newest version tag and offers to install the DMG attached to its release.

@@ -252,6 +252,7 @@ struct ComponentsList: View {
         items.append((DNSServer.formula, "dnsmasq (DNS server)"))
         items.append((AIServer.formula, "afm-cli (Apple Foundation Model)"))
         items.append((RedisServer.formula, "Redis (key-value store)"))
+        items.append((MemcachedServer.formula, "Memcached (object cache)"))
         return items
     }
 

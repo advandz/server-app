@@ -104,11 +104,11 @@ final class Updater: NSObject {
     private var installer: UpdateInstaller?
     private var timer: Timer?
 
-    /// The API base URL. A hidden `UpdateFeedURL` default can point it elsewhere for testing.
-    private var feedBase: String {
-        UserDefaults.standard.string(forKey: "UpdateFeedURL")
-            ?? "https://api.github.com/repos/\(Self.repository)"
-    }
+    /// The API base URL. For testing only, the SERVER_APP_UPDATE_FEED environment variable can
+    /// point it elsewhere. (A stored preference is deliberately not honoured: any program running
+    /// as you could set it and have Server install its own app.)
+    private var feedOverride: String? { ProcessInfo.processInfo.environment["SERVER_APP_UPDATE_FEED"] }
+    private var feedBase: String { feedOverride ?? "https://api.github.com/repos/\(Self.repository)" }
 
     // MARK: Scheduling
 
@@ -190,7 +190,7 @@ final class Updater: NSObject {
             version: newest.version,
             tag: newest.tag,
             notes: release?.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
-            downloadURL: dmg.map(Self.isTrusted) == true ? dmg : nil,
+            downloadURL: dmg.map { Self.isTrusted($0, testing: feedOverride != nil) } == true ? dmg : nil,
             pageURL: page
         )
     }
@@ -207,10 +207,15 @@ final class Updater: NSObject {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    /// Downloads must come over HTTPS (or from this Mac, when testing).
-    nonisolated static func isTrusted(_ url: URL) -> Bool {
-        if url.scheme == "https" { return true }
-        return url.scheme == "http" && ["127.0.0.1", "localhost", "::1"].contains(url.host ?? "")
+    /// Downloads must come over HTTPS from GitHub (or, when testing, from this Mac).
+    nonisolated static func isTrusted(_ url: URL, testing: Bool = false) -> Bool {
+        let host = (url.host ?? "").lowercased()
+        if testing {
+            if url.scheme == "https" { return true }
+            return url.scheme == "http" && ["127.0.0.1", "localhost", "::1"].contains(host)
+        }
+        guard url.scheme == "https" else { return false }
+        return host == "github.com" || host.hasSuffix(".github.com") || host.hasSuffix(".githubusercontent.com")
     }
 
     // MARK: Prompts

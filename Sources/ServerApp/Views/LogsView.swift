@@ -15,7 +15,7 @@ struct LogSource: Identifiable, Hashable {
 /// Every log Server writes, grouped for the Logs page. Files are discovered by scanning the
 /// logs folder, so per-site, HTTPS and PHP logs show up as soon as they exist.
 enum LogCatalog {
-    static let groupOrder = ["Server", "Apache", "Nginx", "PHP", "MySQL", "Redis", "FTP", "DNS", "AI Models", "Cloudflare"]
+    static let groupOrder = ["Server", "Apache", "Nginx", "PHP", "MySQL", "Redis", "Object Caching", "FTP", "DNS", "Mail", "AI Models", "Cloudflare"]
 
     @MainActor
     static func sources(config: AppConfig) -> [LogSource] {
@@ -72,7 +72,9 @@ enum LogCatalog {
         if base.hasPrefix("php") { return "PHP" }
         if base.hasPrefix("ftp") { return "FTP" }
         if base.hasPrefix("dns") { return "DNS" }
+        if base.hasPrefix("mail") { return "Mail" }
         if base.hasPrefix("redis") { return "Redis" }
+        if base.hasPrefix("memcached") { return "Object Caching" }
         if base.hasPrefix("cloudflared") { return "Cloudflare" }
         if base.hasPrefix("ai_") { return "AI Models" }
         return "Server"
@@ -95,7 +97,7 @@ enum LogCatalog {
         if base.hasSuffix("_access") { return "Access Log" }
         if base.hasSuffix("_start") { return "Startup Output" }
         if base.hasSuffix("_transfer") { return "Transfer Log" }
-        if base == "dns" || base == "redis" { return "Server Log" }
+        if base == "dns" || base == "redis" || base == "memcached" { return "Server Log" }
         if base == "ai_requests" { return "Requests" }
         return base
     }

@@ -45,6 +45,15 @@ struct NetworkEntry: Identifiable, Sendable {
 }
 
 enum NetworkScanner {
+    /// Turns a network service on or off, like Make Service Inactive in System Settings.
+    /// Tries it as you first; macOS usually wants an administrator password. Returns an error message, "" if cancelled, or nil.
+    static func setEnabled(_ name: String, enabled: Bool) async -> String? {
+        let args = ["-setnetworkserviceenabled", name, enabled ? "on" : "off"]
+        let direct = await Shell.run("/usr/sbin/networksetup", args)
+        if direct.ok, !direct.output.localizedCaseInsensitiveContains("error") { return nil }
+        return await Privileged.run([["/usr/sbin/networksetup"] + args])
+    }
+
     /// The IPv4 address of the primary (default route) interface.
     static func primaryIPv4() -> String? {
         guard let store = SCDynamicStoreCreate(nil, "Server" as CFString, nil, nil),
@@ -219,6 +228,7 @@ enum NetworkScanner {
 // MARK: - Network page
 
 struct NetworkView: View {
+    @Environment(AppState.self) private var app
     @State private var entries: [NetworkEntry] = []
     @State private var loaded = false
 
@@ -234,7 +244,7 @@ struct NetworkView: View {
                     let services = entries.filter(\.isService), others = entries.filter { !$0.isService }
                     if !services.isEmpty {
                         Text("Network Services").font(.headline).foregroundStyle(.secondary).padding(.leading, 6)
-                        ForEach(services) { NetworkCard(entry: $0) }
+                        ForEach(services) { entry in NetworkCard(entry: entry) { on in await toggle(entry, on: on) } }
                     }
                     if !others.isEmpty {
                         Text("Other Interfaces").font(.headline).foregroundStyle(.secondary).padding(.leading, 6).padding(.top, 6)
@@ -253,6 +263,15 @@ struct NetworkView: View {
         }
     }
 
+    private func toggle(_ entry: NetworkEntry, on: Bool) async {
+        if let error = await NetworkScanner.setEnabled(entry.name, enabled: on) {
+            if !error.isEmpty { app.flash(String(localized: "Couldn't change \(entry.name): \(error)")) }
+        } else {
+            app.flash(on ? String(localized: "\(entry.name) is on.") : String(localized: "\(entry.name) is off."))
+        }
+        entries = await Task.detached(priority: .userInitiated) { NetworkScanner.scan() }.value
+    }
+
     private var subtitle: String {
         let active = entries.filter { $0.isService && $0.isActive }.count
         return loaded ? "\(active) of \(entries.filter(\.isService).count) services connected" : "Network interfaces and settings"
@@ -261,6 +280,8 @@ struct NetworkView: View {
 
 struct NetworkCard: View {
     let entry: NetworkEntry
+    var onToggle: ((Bool) async -> Void)? = nil
+    @State private var switching = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -291,6 +312,15 @@ struct NetworkCard: View {
                 Spacer()
                 if let first = entry.ipv4.first {
                     Text(first.address).font(.title3.monospacedDigit()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+                if entry.isService, let onToggle {
+                    if switching { ProgressView().controlSize(.small) }
+                    Toggle("", isOn: Binding(get: { entry.serviceEnabled }, set: { on in
+                        switching = true
+                        Task { await onToggle(on); switching = false }
+                    }))
+                    .toggleStyle(.switch).labelsHidden().disabled(switching)
+                    .help(entry.serviceEnabled ? "Turn this network off" : "Turn this network on")
                 }
             }
             if entry.type == "Wi-Fi" { WiFiNameRow(entry: entry) }

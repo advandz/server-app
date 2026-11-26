@@ -8,6 +8,6 @@ import Foundation
 enum LocalizedExtras {
     static let tabs: [LocalizedStringResource] = [
         "Overview", "Try It", "Settings", "Records", "Users", "Extensions", "Composer", "Storage", "Components",
-        "Console", "Modules", "Databases", "General", "Share", "SSL", "All Content", "iCloud Content", "Shared Content",
+        "Console", "Modules", "Accounts", "SMTP", "IMAP", "Databases", "General", "Share", "SSL", "All Content", "iCloud Content", "Shared Content",
     ]
 }

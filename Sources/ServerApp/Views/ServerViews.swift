@@ -8,7 +8,7 @@ struct ServiceOverviewCard: View {
     @Environment(AppState.self) private var app
     let kind: ServiceKind
     let formula: String
-    let configFile: String
+    var configFile: String? = nil
 
     var body: some View {
         Card {
@@ -17,6 +17,7 @@ struct ServiceOverviewCard: View {
                 Text(app.brew.version(formula).map { "\(formula) \($0)" } ?? "Not installed — installed automatically on first start")
                     .foregroundStyle(.secondary)
             }
+            if let configFile {
             FormRow(label: "Configuration") {
                 HStack {
                     Text(configFile).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
@@ -24,6 +25,7 @@ struct ServiceOverviewCard: View {
                         .buttonStyle(.borderless).help("Show in Finder")
                         .disabled(!FileManager.default.fileExists(atPath: configFile))
                 }
+            }
             }
         }
         if let err = app.errors[kind] { ErrorBanner(text: err) { app.errors[kind] = nil } }
@@ -88,6 +90,7 @@ struct ApacheSettingsTab: View {
                 FormRow(label: "Server Admin") {
                     TextField("e-mail address or empty", text: app.bind(\.apache.serverAdmin)).textFieldStyle(.roundedBorder)
                 }
+                FormRow(label: "Network") { Toggle("Accept connections from other devices", isOn: webNetwork(app)) }
                 FormRow(label: "Log Level") { LogLevelPicker(selection: app.bind(\.apache.logLevel), levels: ["debug", "info", "notice", "warn", "error", "crit"]) }
                 FormRow(label: "Server Tokens") { Toggle("Hide version details (ServerTokens Prod)", isOn: app.bind(\.apache.serverTokensProd)) }
             }
@@ -233,6 +236,7 @@ struct NginxSettingsTab: View {
                 FormRow(label: "Max Upload Size") {
                     TextField("64m", text: app.bind(\.nginx.clientMaxBodySize)).textFieldStyle(.roundedBorder).frame(width: 90)
                 }
+                FormRow(label: "Network") { Toggle("Accept connections from other devices", isOn: webNetwork(app)) }
                 FormRow(label: "Log Level") { LogLevelPicker(selection: app.bind(\.nginx.logLevel), levels: ["debug", "info", "notice", "warn", "error", "crit"]) }
             }
             Card(title: "Custom Configuration", footer: "Added inside the http { } block of nginx.conf. Validated with nginx -t before it is applied.") {
@@ -301,6 +305,7 @@ struct MySQLView: View {
     @Environment(AppState.self) private var app
     enum Tab: String, CaseIterable { case overview = "Overview", settings = "Settings", databases = "Databases" }
     @State private var tab: Tab = .overview
+    @State private var passwordSheet: MySQLRootPasswordSheet.Mode?
 
     var body: some View {
         DetailPage {
@@ -315,6 +320,7 @@ struct MySQLView: View {
             case .databases: MySQLDatabasesTab()
             }
         }
+        .sheet(item: $passwordSheet) { mode in MySQLRootPasswordSheet(mode: mode) }
     }
 
     private var overview: some View {
@@ -326,7 +332,9 @@ struct MySQLView: View {
                 }
             }
             ServiceOverviewCard(kind: .mysql, formula: app.config.mysql.formula, configFile: ConfigGenerator.mysqlConfFile)
-            Card(title: "Connection", footer: "MySQL only listens on this Mac (127.0.0.1). The root user has no password; each website gets its own user.") {
+            Card(title: "Connection", footer: app.mysqlRootPassword.isEmpty
+                 ? "MySQL only listens on this Mac (127.0.0.1). The root user has no password; each website gets its own user."
+                 : "MySQL only listens on this Mac (127.0.0.1). Each website gets its own user.") {
                 FormRow(label: "Host") { Text("127.0.0.1").textSelection(.enabled) }
                 FormRow(label: "Port") { Text("\(app.config.mysql.port)").monospacedDigit() }
                 FormRow(label: "Socket") { Text(Paths.mysqlSocket).font(.caption).textSelection(.enabled) }
@@ -334,6 +342,22 @@ struct MySQLView: View {
                     Text(Paths.mysqlDataDir(app.config.mysql.formula)).font(.caption).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 }
                 FormRow(label: "Databases") { Text("\(app.config.databases.count) managed by Server").foregroundStyle(.secondary) }
+            }
+            Card(title: "Root Password",
+                 footer: "Server keeps the root password so it can create databases for your websites. Reset Password works even if you've forgotten it: MySQL restarts briefly while it's set.") {
+                FormRow(label: "Password") {
+                    HStack(spacing: 10) {
+                        if app.mysqlRootPassword.isEmpty {
+                            Text("None (this Mac only)").foregroundStyle(.secondary)
+                        } else {
+                            Text("••••••••••••").foregroundStyle(.secondary)
+                            CopyButton(text: app.mysqlRootPassword)
+                        }
+                        Spacer()
+                        Button("Change Password…") { passwordSheet = .change }.glassButton()
+                        Button("Reset Password…") { passwordSheet = .reset }.glassButton()
+                    }
+                }
             }
         }
     }
@@ -423,4 +447,82 @@ struct MySQLDatabasesTab: View {
             }
         } message: { Text("All tables and data in this database are permanently deleted.") }
     }
+}
+
+/// Change or reset the MySQL root password.
+struct MySQLRootPasswordSheet: View {
+    enum Mode: String, Identifiable { case change, reset; var id: String { rawValue } }
+
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    let mode: Mode
+    @State private var password = ""
+    @State private var working = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            PageHeader(symbol: "key", title: mode == .change ? "Change Root Password" : "Reset Root Password",
+                       subtitle: "MySQL", tint: .teal)
+            Text(mode == .change
+                 ? "Sets a new password for the MySQL root user. Server uses it from now on."
+                 : "Use this if the root password is lost. MySQL restarts briefly in recovery mode, reachable only from this Mac, and any websites using it are unavailable for a few seconds.")
+                .font(.callout).foregroundStyle(.secondary)
+            FormRow(label: "New Password", labelWidth: 120) {
+                HStack {
+                    TextField("None", text: $password).textFieldStyle(.roundedBorder).font(.body.monospaced())
+                    Button("Generate") { password = AppState.randomPassword(24) }.glassButton()
+                }
+            }
+            Text(password.isEmpty ? "With no password, anyone using this Mac can log in to MySQL as root."
+                                  : "Letters, numbers and symbols are all fine.")
+                .font(.caption).foregroundStyle(password.isEmpty ? Color.orange : Color.secondary)
+                .padding(.leading, 132)
+            if let error { ErrorBanner(text: error) { self.error = nil } }
+            HStack {
+                if working { ProgressView().controlSize(.small) }
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(working)
+                Button(mode == .change ? "Change Password" : "Reset Password") { apply() }
+                    .keyboardShortcut(.defaultAction).glassButton(prominent: true).disabled(working)
+            }
+        }
+        .padding(26).frame(width: 540)
+    }
+
+    private func apply() {
+        working = true; error = nil
+        let new = password
+        Task {
+            let problem = mode == .change ? await app.changeMySQLRootPassword(to: new) : await app.resetMySQLRootPassword(to: new)
+            working = false
+            if let problem { error = problem } else { dismiss() }
+        }
+    }
+}
+
+/// A small button that copies text to the clipboard.
+struct CopyButton: View {
+    let text: String
+    @State private var copied = false
+    var body: some View {
+        Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            copied = true
+            Task { try? await Task.sleep(for: .seconds(1.5)); copied = false }
+        } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc") }
+            .buttonStyle(.borderless).help("Copy").accessibilityLabel("Copy")
+    }
+}
+
+/// One switch for both web servers. Listening addresses only change on a full restart.
+@MainActor
+func webNetwork(_ app: AppState) -> Binding<Bool> {
+    Binding(get: { app.config.webAllowNetwork }, set: { value in
+        app.update { $0.webAllowNetwork = value }
+        Task {
+            for kind in [ServiceKind.apache, .nginx] where app.isRunning(kind) { await app.restart(kind) }
+        }
+    })
 }
