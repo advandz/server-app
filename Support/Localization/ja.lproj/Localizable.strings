@@ -865,3 +865,5 @@
 "Couldn't change %@: %@" = "%1$@ を変更できませんでした: %2$@";
 "%@ is on." = "%@ をオンにしました。";
 "%@ is off." = "%@ をオフにしました。";
+"The update has no valid signature, so it wasn't installed." = "アップデートに有効な署名がないため、インストールされませんでした。";
+"The update's signature doesn't match, so it wasn't installed." = "アップデートの署名が一致しないため、インストールされませんでした。";

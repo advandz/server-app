@@ -865,3 +865,5 @@
 "Couldn't change %@: %@" = "No se pudo cambiar %@: %@";
 "%@ is on." = "%@ está activada.";
 "%@ is off." = "%@ está desactivada.";
+"The update has no valid signature, so it wasn't installed." = "La actualización no tiene una firma válida, por lo que no se instaló.";
+"The update's signature doesn't match, so it wasn't installed." = "La firma de la actualización no coincide, por lo que no se instaló.";

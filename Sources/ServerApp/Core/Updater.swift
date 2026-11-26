@@ -60,6 +60,8 @@ struct AvailableUpdate {
     let notes: String
     /// The disk image attached to the tag's GitHub release, if there is one.
     let downloadURL: URL?
+    /// The signature file (`<image>.sig`) attached next to it. Without one, nothing is installed.
+    let signatureURL: URL?
     let pageURL: URL
 }
 
@@ -183,7 +185,10 @@ final class Updater: NSObject {
 
         let encodedTag = newest.tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.tag
         let release: GitHubRelease? = try? await get("releases/tags/\(encodedTag)")
-        let dmg = release?.assets.first { $0.name.lowercased().hasSuffix(".dmg") }?.browserDownloadURL
+        let testing = feedOverride != nil
+        let dmgAsset = release?.assets.first { $0.name.lowercased().hasSuffix(".dmg") }
+        let dmg = dmgAsset?.browserDownloadURL
+        let sig = dmgAsset.flatMap { dmgAsset in release?.assets.first { $0.name == dmgAsset.name + ".sig" } }?.browserDownloadURL
         let page = release?.htmlURL
             ?? URL(string: "https://github.com/\(Self.repository)/releases/tag/\(encodedTag)")!
 
@@ -191,7 +196,8 @@ final class Updater: NSObject {
             version: newest.version,
             tag: newest.tag,
             notes: release?.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
-            downloadURL: dmg.map { Self.isTrusted($0, testing: feedOverride != nil) } == true ? dmg : nil,
+            downloadURL: dmg.map { Self.isTrusted($0, testing: testing) } == true ? dmg : nil,
+            signatureURL: sig.map { Self.isTrusted($0, testing: testing) } == true ? sig : nil,
             pageURL: page
         )
     }
@@ -224,7 +230,7 @@ final class Updater: NSObject {
     /// "Install Update", "Later" or "Skip This Version".
     private func present(_ update: AvailableUpdate) {
         NSApp.activate()
-        let canInstall = update.downloadURL != nil && UpdateInstaller.canReplaceRunningApp
+        let canInstall = update.downloadURL != nil && update.signatureURL != nil && UpdateInstaller.canReplaceRunningApp
 
         let alert = NSAlert()
         alert.icon = NSApp.applicationIconImage
@@ -356,6 +362,7 @@ final class UpdateInstaller: NSObject {
     private let progress = InstallProgress()
     private var window: NSWindow?
     private var task: URLSessionDownloadTask?
+    private var signature = ""
     private var observation: NSKeyValueObservation?
     private let workDirectory = FileManager.default.temporaryDirectory
         .appendingPathComponent("ServerUpdate-\(UUID().uuidString)", isDirectory: true)
@@ -375,11 +382,32 @@ final class UpdateInstaller: NSObject {
     }
 
     func start() {
-        guard let url = update.downloadURL else { return }
+        guard let url = update.downloadURL, let signatureURL = update.signatureURL else { return }
         showWindow()
         let version = update.version.description
         progress.message = String(localized: "Downloading Server \(version)…")
+        Task {
+            do {
+                signature = try await Self.fetchSignature(signatureURL)
+            } catch {
+                fail(UpdateError.invalidDownload(String(localized: "The update has no valid signature, so it wasn't installed.")))
+                return
+            }
+            beginDownload(url)
+        }
+    }
 
+    /// The signature file is a short base64 line.
+    nonisolated private static func fetchSignature(_ url: URL) async throws -> String {
+        var request = URLRequest(url: url, timeoutInterval: 20)
+        request.setValue("Server/\(AppVersion.current)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 1024,
+              let text = String(data: data, encoding: .utf8) else { throw UpdateError.server(0) }
+        return text
+    }
+
+    private func beginDownload(_ url: URL) {
         try? FileManager.default.createDirectory(at: workDirectory, withIntermediateDirectories: true)
         let destination = workDirectory.appendingPathComponent("Server-\(update.version).dmg")
 
@@ -436,9 +464,11 @@ final class UpdateInstaller: NSObject {
             let bundleID = Bundle.main.bundleIdentifier ?? ""
             let version = update.version
             let work = workDirectory
+            let signature = signature
             Task.detached {
                 do {
-                    let staged = try Self.stage(dmg: dmg, work: work, version: version, bundleID: bundleID, target: target)
+                    let staged = try Self.stage(dmg: dmg, work: work, version: version, bundleID: bundleID,
+                                                target: target, signature: signature)
                     await MainActor.run { self.relaunch(replacing: target, with: staged) }
                 } catch {
                     await MainActor.run { self.fail(error) }
@@ -450,7 +480,11 @@ final class UpdateInstaller: NSObject {
     /// Mounts the image, checks the app inside and copies it next to the
     /// running app (same volume, so the final swap is a quick rename).
     nonisolated private static func stage(dmg: URL, work: URL, version: AppVersion,
-                                          bundleID: String, target: URL) throws -> URL {
+                                          bundleID: String, target: URL, signature: String) throws -> URL {
+        // Before anything opens the image: it must carry a valid signature from our key.
+        guard UpdateSigning.verify(file: dmg, version: version.description, signature: signature) else {
+            throw UpdateError.invalidDownload(String(localized: "The update's signature doesn't match, so it wasn't installed."))
+        }
         let mountPoint = work.appendingPathComponent("mount", isDirectory: true)
         try FileManager.default.createDirectory(at: mountPoint, withIntermediateDirectories: true)
         try run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountPoint.path])

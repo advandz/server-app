@@ -1,6 +1,7 @@
 // Copyright © 2026 Advandz Technologies, LLC. Released under the MIT License (see LICENSE.md).
 // SPDX-License-Identifier: MIT
 
+import CryptoKit
 import Foundation
 
 /// `Server --self-test` exercises the real service code end to end on spare ports.
@@ -32,6 +33,24 @@ enum SelfTest {
         check(gen.apacheConfig().contains("Listen 127.0.0.1:80") && !gen.apacheConfig().contains("\nListen 80\n"), "Apache can listen on this Mac only")
         check(gen.nginxConfig().contains("listen 127.0.0.1:8080 default_server;"), "Nginx can listen on this Mac only")
         check(FTPServer.arguments(FTPSettings()).contains("127.0.0.1,21"), "FTP is limited to this Mac by default")
+
+        // Update signatures: a good one passes; a changed file, version, key or garbage fails.
+        do {
+            let key = Curve25519.Signing.PrivateKey()
+            let pub = key.publicKey.rawRepresentation.base64EncodedString()
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("sigtest-\(UUID().uuidString).dmg")
+            try Data("pretend disk image".utf8).write(to: file)
+            defer { try? FileManager.default.removeItem(at: file) }
+            func hash(_ u: URL) -> String { SHA256.hash(data: (try? Data(contentsOf: u)) ?? Data()).map { String(format: "%02x", $0) }.joined() }
+            let sig = try key.signature(for: UpdateSigning.message(version: "1.2.0", sha256: hash(file))).base64EncodedString()
+            check(UpdateSigning.verify(file: file, version: "1.2.0", signature: sig, publicKey: pub), "update signature: valid one is accepted")
+            check(!UpdateSigning.verify(file: file, version: "1.2.1", signature: sig, publicKey: pub), "update signature: other version is rejected")
+            check(!UpdateSigning.verify(file: file, version: "1.2.0", signature: sig, publicKey: Curve25519.Signing.PrivateKey().publicKey.rawRepresentation.base64EncodedString()), "update signature: other key is rejected")
+            check(!UpdateSigning.verify(file: file, version: "1.2.0", signature: "", publicKey: pub), "update signature: empty is rejected")
+            check(!UpdateSigning.verify(file: file, version: "1.2.0", signature: "not base64!!", publicKey: pub), "update signature: garbage is rejected")
+            try Data("tampered disk image".utf8).write(to: file)
+            check(!UpdateSigning.verify(file: file, version: "1.2.0", signature: sig, publicKey: pub), "update signature: changed file is rejected")
+        } catch { check(false, "update signature test setup: \(error)") }
         if ProcessInfo.processInfo.environment["SELFTEST_MAIL"] == "only" { return await runMail(app, check: check) }
         if ProcessInfo.processInfo.environment["SELFTEST_CACHE"] == "only" { return await runCache(app, check: check) }
 

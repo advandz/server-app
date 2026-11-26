@@ -68,16 +68,19 @@ If the app isn't in **Applications**, use its actual path. Only do this for a co
 
 ## Release
 
-1. Set `VERSION` in `build.sh`.
-2. Run `./build.sh`.
-3. Tag and publish, attaching the DMG:
+Updates are signed: the app only installs a disk image whose signature matches the public key built into it (`Sources/ServerApp/Core/UpdateSigning.swift`), so a forged or tampered download is rejected.
+
+1. One time: `swift Tools/sign-update.swift keygen` creates the private key in `~/.server-app-signing/` (outside this repository) and prints the public key to put in `UpdateSigning.swift`. Back the key up and never commit it. Losing it means existing installs can't be updated automatically.
+2. Set `VERSION` in `build.sh`.
+3. Run `./build.sh`. It builds the app and DMG and signs the DMG, writing `build/Server-<version>.dmg.sig`.
+4. Tag and publish, attaching **both** files:
 
    ```bash
-   git tag v1.1.1 && git push origin v1.1.1
-   gh release create v1.1.1 build/Server-1.1.1.dmg --title "Server 1.1.1"
+   git tag v1.2.0 && git push origin v1.2.0
+   gh release create v1.2.0 build/Server-1.2.0.dmg build/Server-1.2.0.dmg.sig --title "Server 1.2.0"
    ```
 
-The app finds the newest version tag and offers to install the DMG attached to its release.
+The app finds the newest version tag and offers to install the DMG attached to its release, after checking its signature. A release without the `.sig` file isn't installed automatically; the app sends people to the release page instead.
 
 ## License
 

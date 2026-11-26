@@ -58,7 +58,7 @@ Homebrew is installed automatically if it's missing. On every launch Server upda
 ## Settings and updates
 
 - **Settings** (⌘,): open Server at login, minimized or in full screen.
-- **Automatic updates** come from this repository's releases.
+- **Automatic updates** come from this repository's releases and are only installed if their signature is valid.
 - Available in English, Spanish, French, German, Italian, Portuguese (Brazil), Japanese, Korean and Chinese (Simplified).
 
 ## Where things live

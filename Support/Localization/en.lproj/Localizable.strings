@@ -865,3 +865,5 @@
 "Couldn't change %@: %@" = "Couldn't change %@: %@";
 "%@ is on." = "%@ is on.";
 "%@ is off." = "%@ is off.";
+"The update has no valid signature, so it wasn't installed." = "The update has no valid signature, so it wasn't installed.";
+"The update's signature doesn't match, so it wasn't installed." = "The update's signature doesn't match, so it wasn't installed.";

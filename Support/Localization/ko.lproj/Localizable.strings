@@ -865,3 +865,5 @@
 "Couldn't change %@: %@" = "%1$@ 항목을 변경할 수 없습니다: %2$@";
 "%@ is on." = "%@ 켜짐.";
 "%@ is off." = "%@ 꺼짐.";
+"The update has no valid signature, so it wasn't installed." = "업데이트에 유효한 서명이 없어 설치되지 않았습니다.";
+"The update's signature doesn't match, so it wasn't installed." = "업데이트 서명이 일치하지 않아 설치되지 않았습니다.";

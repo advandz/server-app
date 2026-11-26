@@ -858,3 +858,5 @@
 862|Não foi possível alterar %@: %@
 863|%@ está ativada.
 864|%@ está desativada.
+865|A atualização não tem uma assinatura válida, então não foi instalada.
+866|A assinatura da atualização não confere, então ela não foi instalada.

@@ -858,3 +858,5 @@
 862|%1$@ konnte nicht geändert werden: %2$@
 863|%@ ist eingeschaltet.
 864|%@ ist ausgeschaltet.
+865|Das Update hat keine gültige Signatur und wurde deshalb nicht installiert.
+866|Die Signatur des Updates stimmt nicht überein, deshalb wurde es nicht installiert.

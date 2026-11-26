@@ -858,3 +858,5 @@
 862|No se pudo cambiar %@: %@
 863|%@ está activada.
 864|%@ está desactivada.
+865|La actualización no tiene una firma válida, por lo que no se instaló.
+866|La firma de la actualización no coincide, por lo que no se instaló.

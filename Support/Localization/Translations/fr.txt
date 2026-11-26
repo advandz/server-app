@@ -858,3 +858,5 @@
 862|Impossible de modifier %@ : %@
 863|%@ est activé.
 864|%@ est désactivé.
+865|La mise à jour n’a pas de signature valide, elle n’a donc pas été installée.
+866|La signature de la mise à jour ne correspond pas, elle n’a donc pas été installée.
