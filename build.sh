@@ -6,8 +6,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="Server"
-BUNDLE_ID="com.local.serverapp"
-VERSION="1.2.0"
+BUNDLE_ID="com.advandz.server"
+VERSION="1.0.0"
 OUT="build/${APP_NAME}.app"
 
 echo "→ Compiling (arm64 + x86_64)…"
@@ -102,7 +102,7 @@ echo "✓ Packed $DMG"
 
 # Sign the image for the updater (the app only installs images signed with this key).
 # The private key lives outside the repo; see Tools/sign-update.swift.
-if [ -f "${SERVER_APP_SIGNING_KEY:-$HOME/.server-app-signing/update-signing.key}" ]; then
+if [ -f "${SERVER_APP_SIGNING_KEY:-$HOME/.com.advandz.server/update-signing.key}" ]; then
   swift Tools/sign-update.swift sign "$DMG" "$VERSION"
 else
   echo "! No update signing key: $DMG.sig not created. Releases without it can't be installed by the updater."

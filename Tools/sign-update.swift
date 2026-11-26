@@ -7,14 +7,14 @@
 //   swift Tools/sign-update.swift sign <dmg> <ver>  writes <dmg>.sig
 //
 // The private key lives outside the repository (SERVER_APP_SIGNING_KEY, default
-// ~/.server-app-signing/update-signing.key). Back it up and never commit it. The message that
+// ~/.com.advandz.server/update-signing.key). Back it up and never commit it. The message that
 // is signed must match UpdateSigning.message in Sources/ServerApp/Core/UpdateSigning.swift.
 
 import CryptoKit
 import Foundation
 
 let keyPath = ProcessInfo.processInfo.environment["SERVER_APP_SIGNING_KEY"]
-    ?? NSHomeDirectory() + "/.server-app-signing/update-signing.key"
+    ?? NSHomeDirectory() + "/.com.advandz.server/update-signing.key"
 
 func fail(_ text: String) -> Never { FileHandle.standardError.write(Data((text + "\n").utf8)); exit(1) }
 

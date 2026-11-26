@@ -18,7 +18,7 @@ enum StartupMode: String, Codable, CaseIterable, Identifiable {
 /// the app yourself.
 enum LaunchAtStartup {
     static let argument = "--launched-at-login"
-    static let label = "com.local.serverapp.login"
+    static let label = "com.advandz.server.login"
     static var plistPath: String { NSHomeDirectory() + "/Library/LaunchAgents/\(label).plist" }
 
     static var launchedAtLogin: Bool { CommandLine.arguments.contains(argument) }
