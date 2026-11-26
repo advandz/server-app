@@ -73,8 +73,8 @@ If the app isn't in **Applications**, use its actual path. Only do this for a co
 3. Tag and publish, attaching the DMG:
 
    ```bash
-   git tag v1.1.0 && git push origin v1.1.0
-   gh release create v1.1.0 build/Server-1.1.0.dmg --title "Server 1.1.0"
+   git tag v1.1.1 && git push origin v1.1.1
+   gh release create v1.1.1 build/Server-1.1.1.dmg --title "Server 1.1.1"
    ```
 
 The app finds the newest version tag and offers to install the DMG attached to its release.
