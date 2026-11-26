@@ -112,9 +112,10 @@ final class Updater: NSObject {
 
     // MARK: Scheduling
 
-    /// Checks shortly after launch and then roughly once a day, when enabled.
+    /// Checks shortly after every launch, then again once a day while the app stays open.
     func start() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.checkIfDue() }
+        guard timer == nil else { return }               // only once, even if the window is reopened
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.check(userInitiated: false) }
         timer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.checkIfDue() }
         }

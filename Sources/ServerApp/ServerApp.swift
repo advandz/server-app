@@ -30,10 +30,10 @@ struct ServerAppMain: App {
                 .preferredColorScheme(SystemStatus.demoValue == "light" ? .light : SystemStatus.demoValue == "dark" ? .dark : nil)
                 .task {
                     delegate.app = app
+                    Updater.shared.start()               // before the slower startup work, so it can't delay the check
                     await app.startup()
                     LaunchAtStartup.apply(app.config.startupMode)     // keeps the app's path current
                     LaunchAtStartup.arrangeWindow(app.config.startupMode)
-                    Updater.shared.start()
                 }
         }
         .defaultSize(width: 1120, height: 760)
